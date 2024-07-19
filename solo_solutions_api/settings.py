@@ -111,12 +111,8 @@ WSGI_APPLICATION = 'solo_solutions_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'solo_solutions',
-        'USER': 'postgres',
-        'PASSWORD': 'carvalho23',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
