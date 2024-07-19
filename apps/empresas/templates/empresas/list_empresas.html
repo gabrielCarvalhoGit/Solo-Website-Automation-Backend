@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Empresas{% endblock %}
+
+{% block main %}
+    <h1>Empresas</h1>
+    <br>
+
+    <ul class="empresas__list">
+        {% for empresa in empresas %}
+            <li class="empresa__item">
+                <a href="#">{{empresa}}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a id="add-link" href="{% url 'adicionar-empresa' %}">
+        <div class="col-2 add-div">
+            <i class="fas fa-plus">Adicionar Empresa</i>
+        </div>
+    </a>
+{% endblock %}

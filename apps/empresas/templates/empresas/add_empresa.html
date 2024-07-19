@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Adicionar Empresa{% endblock %}
+
+{% block main %}
+    <h1>Adicionar Empresa</h1>
+
+    <script id="django-messages" type="application/json">
+        [
+            {% for message in messages %}
+                {"message": "{{ message }}", "tags": "{{ message.tags }}"}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    </script>
+    
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button type="submit">Salvar</button>
+    </form>
+{% endblock %}
+
+{% block static %}
+    <script src="{% static 'empresas/js/messages.js' %}"></script>
+{% endblock %}
