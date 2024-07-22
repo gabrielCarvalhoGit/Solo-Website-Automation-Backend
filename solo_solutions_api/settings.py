@@ -1,15 +1,18 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-r6zgypo#y91fp9o*d#fbro*@m=y%gvz-f8c6ytmy931vh7sv5y'
+load_dotenv()
 
-DEBUG = True
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-ALLOWED_HOSTS = ['3.19.188.117', '127.0.0.1']
+DEBUG = os.getenv("DEBUG")
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -73,7 +76,6 @@ SIMPLE_JWT = {
 }
 
 CELERY_RESULT_BACKEND = 'django-db'
-
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
@@ -140,17 +142,22 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'staticfiles')
 ]
 
-STATIC_ROOT = os.path.join(BASE_DIR, "static/")
-
 LOGIN_REDIRECT_URL = '/'
-
 LOGOUT_REDIRECT_URL = 'login'
 
 AUTH_USER_MODEL = 'accounts.User'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
+EMAIL_HOST = os.getenv('EMAIL_HOST')

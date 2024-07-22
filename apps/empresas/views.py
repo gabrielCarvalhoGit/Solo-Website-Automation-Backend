@@ -1,5 +1,9 @@
+from django.conf import settings
 from django.contrib import messages
+from django.utils.html import strip_tags
 from django.shortcuts import render, redirect
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.decorators import login_required
 
@@ -32,7 +36,6 @@ def create_empresa(request):
             empresa.save()
 
             password_temp = User.objects.make_random_password(length=10)
-            print(password_temp)
             user = User.objects.create_user(
                 email=email,
                 password=password_temp,
@@ -43,7 +46,17 @@ def create_empresa(request):
             refresh = RefreshToken.for_user(user)
             token = str(refresh.access_token)
 
-            print(token)
+            # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa})
+            # text_content = strip_tags(html_content)
+
+            # email = EmailMultiAlternatives(
+            #     'Solo Solutions - Mudar senha do usuário',
+            #     text_content,
+            #     settings.EMAIL_HOST_USER,
+            #     [email]
+            # )
+            # email.attach_alternative(html_content, 'text/html')
+            # email.send()
 
             return redirect('empresas-cadastradas')
         
