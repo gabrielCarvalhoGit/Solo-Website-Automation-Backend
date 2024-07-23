@@ -9,6 +9,9 @@ from .utils import validate_jwt_token
 def reset_password(request):
     token = request.GET.get('token')
     refresh_token = validate_jwt_token(token)
+
+    if request.user.is_authenticated:
+        return redirect('/')
     
     if not refresh_token:
         return redirect('login')
