@@ -4,11 +4,12 @@ from django.utils.html import strip_tags
 from django.shortcuts import render, redirect
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.decorators import login_required
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Empresa
 from .forms import EmpresaForm
+from .tasks import enviar_email_empresa
 from apps.accounts.models import User
 
 
@@ -45,6 +46,8 @@ def create_empresa(request):
 
             refresh = RefreshToken.for_user(user)
             token = str(refresh.access_token)
+
+            enviar_email_empresa.delay(empresa)
 
             # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa})
             # text_content = strip_tags(html_content)
