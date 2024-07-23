@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Empresa
 from .forms import EmpresaForm
 from .tasks import enviar_email_empresa
+from .utils import generate_refresh_token
 from apps.accounts.models import User
 
 
@@ -44,12 +45,12 @@ def create_empresa(request):
             )
             user.save()
 
-            refresh = RefreshToken.for_user(user)
-            token = str(refresh.access_token)
+            token = generate_refresh_token(user)
 
-            enviar_email_empresa.delay(empresa.nome, email)
+            link_redefinicao = f"{settings.SITE_URL}/accounts/reset-password/?token={token}"
+            enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
 
-            # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa})
+            # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
             # text_content = strip_tags(html_content)
 
             # email = EmailMultiAlternatives(
