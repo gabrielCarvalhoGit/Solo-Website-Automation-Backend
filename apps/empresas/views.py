@@ -47,7 +47,7 @@ def create_empresa(request):
             refresh = RefreshToken.for_user(user)
             token = str(refresh.access_token)
 
-            enviar_email_empresa.delay(empresa.nome)
+            enviar_email_empresa.delay(empresa)
 
             # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa})
             # text_content = strip_tags(html_content)
