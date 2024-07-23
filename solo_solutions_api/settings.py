@@ -14,7 +14,7 @@ DEBUG = os.getenv("DEBUG")
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(',')
 
-SITE_URL = 'http://127.0.0.1:8000'
+SITE_URL = os.getenv('SITE_URL')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
