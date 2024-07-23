@@ -14,7 +14,7 @@ def mul(x, y):
     return x * y
 
 @shared_task
-def enviar_email_empresa(empresa):
+def enviar_email_empresa(empresa, email):
     html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa})
     text_content = strip_tags(html_content)
 
