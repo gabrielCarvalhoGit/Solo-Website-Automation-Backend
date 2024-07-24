@@ -23,7 +23,7 @@ def list_empresas(request):
 @login_required
 def create_empresa(request):
     if request.method == 'POST':
-        form = EmpresaForm(request.POST)
+        form = EmpresaCreateForm(request.POST)
 
         if form.is_valid():
             empresa = form.save(commit=False)
@@ -64,7 +64,7 @@ def create_empresa(request):
 
             return redirect('empresas-cadastradas')
         
-    form = EmpresaForm()
+    form = EmpresaCreateForm()
     return render(request, 'empresas/add_empresa.html', {'form': form})
 
 @login_required
