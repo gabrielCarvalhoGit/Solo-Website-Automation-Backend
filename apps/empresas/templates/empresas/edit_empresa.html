@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Editar Empresa{% endblock %}
+
+{% block main %}
+    <h1>{{empresa}}</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <input type="submit" class="btn btn-success" value="Editar empresa">
+    </form>
+{% endblock %}

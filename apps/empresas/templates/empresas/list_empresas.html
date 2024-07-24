@@ -8,7 +8,8 @@
     <ul class="empresas__list">
         {% for empresa in empresas %}
             <li class="empresa__item">
-                <a href="#">{{empresa}}</a>
+                <a href="{% url 'editar-empresa' empresa.id %}">{{empresa}}</a>
+                <a href="{% url 'excluir-empresa' empresa.id %}" class="btn btn-danger">Excluir</a>
             </li>
         {% endfor %}
     </ul>

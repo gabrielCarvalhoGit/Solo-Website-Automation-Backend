@@ -1,16 +1,16 @@
 from django.conf import settings
 from django.contrib import messages
 from django.utils.html import strip_tags
-from django.shortcuts import render, redirect
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Empresa
-from .forms import EmpresaForm
 from .tasks import enviar_email_empresa
 from .utils import generate_refresh_token
+from .forms import EmpresaCreateForm, EmpresaEditForm
 from apps.accounts.models import User
 
 
@@ -66,3 +66,27 @@ def create_empresa(request):
         
     form = EmpresaForm()
     return render(request, 'empresas/add_empresa.html', {'form': form})
+
+@login_required
+def edit_empresa(request, id):
+    empresa = get_object_or_404(Empresa, pk=id)
+    form = EmpresaEditForm(instance=empresa)
+
+    if request.method == 'POST':
+        form = EmpresaEditForm(request.POST, instance=empresa)
+
+        if form.is_valid():
+            form.save()
+            return redirect('empresas-cadastradas')
+        else:
+            return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa})
+    else:
+        return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa})
+    
+@login_required
+def delete_empresa(request, id):
+    empresa = get_object_or_404(Empresa, pk=id)
+    empresa.delete()
+
+    messages.info(request, 'Empresa excluída com sucesso')
+    return redirect('empresas-cadastradas')
