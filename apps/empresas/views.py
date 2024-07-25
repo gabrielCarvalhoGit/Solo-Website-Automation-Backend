@@ -3,9 +3,8 @@ from django.contrib import messages
 from django.utils.html import strip_tags
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.decorators import login_required, permission_required
 
 from .models import Empresa
 from .tasks import enviar_email_empresa
@@ -14,13 +13,15 @@ from .forms import EmpresaCreateForm, EmpresaEditForm
 from apps.accounts.models import User
 
 
-@login_required
+@login_required(login_url='/accounts/login')
+@permission_required('empresas.view_empresa', login_url='/accounts/login', raise_exception=False)
 def list_empresas(request):
     empresas = Empresa.objects.all().order_by('nome')
 
     return render(request, 'empresas/list_empresas.html', {'empresas': empresas})
 
-@login_required
+@login_required(login_url='/accounts/login')
+@permission_required('empresas.add_empresa', login_url='/accounts/login', raise_exception=False)
 def create_empresa(request):
     if request.method == 'POST':
         form = EmpresaCreateForm(request.POST)
@@ -48,26 +49,27 @@ def create_empresa(request):
             token = generate_refresh_token(user)
 
             link_redefinicao = f"{settings.SITE_URL}/accounts/reset-password/?token={token}"
-            enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
+            #enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
 
-            # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
-            # text_content = strip_tags(html_content)
+            html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
+            text_content = strip_tags(html_content)
 
-            # email = EmailMultiAlternatives(
-            #     'Solo Solutions - Mudar senha do usuário',
-            #     text_content,
-            #     settings.EMAIL_HOST_USER,
-            #     [email]
-            # )
-            # email.attach_alternative(html_content, 'text/html')
-            # email.send()
+            email = EmailMultiAlternatives(
+                'Solo Solutions - Mudar senha do usuário',
+                text_content,
+                settings.EMAIL_HOST_USER,
+                [email]
+            )
+            email.attach_alternative(html_content, 'text/html')
+            email.send()
 
             return redirect('empresas-cadastradas')
         
     form = EmpresaCreateForm()
     return render(request, 'empresas/add_empresa.html', {'form': form})
 
-@login_required
+@login_required(login_url='/accounts/login')
+@permission_required('empresas.change_empresa', login_url='/accounts/login', raise_exception=False)
 def edit_empresa(request, id):
     empresa = get_object_or_404(Empresa, pk=id)
     form = EmpresaEditForm(instance=empresa)
@@ -83,7 +85,8 @@ def edit_empresa(request, id):
     else:
         return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa})
     
-@login_required
+@login_required(login_url='/accounts/login')
+@permission_required('empresas.delete_empresas', login_url='/accounts/login', raise_exception=False)
 def delete_empresa(request, id):
     empresa = get_object_or_404(Empresa, pk=id)
     empresa.delete()

@@ -23,7 +23,7 @@
     </nav>
     </ul>
 
-    {% if is_superuser %}
+    {% if perms.empresas.view_empresas %}
         <ul class="list_superuser">
             <li class="superuser_item"><a href="{% url 'empresas-cadastradas' %}">Empresas Cadastradas</a></li>
         </ul>
