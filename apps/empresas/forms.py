@@ -1,5 +1,6 @@
 from django import forms
 from .models import Empresa
+from apps.automacoes.models import Automacao
 
 
 class EmpresaCreateForm(forms.ModelForm):

@@ -17,6 +17,17 @@
         {% csrf_token %}
         {{ form.as_p }}
 
+        {% if automacoes %}
+            <h2>Selecione as Automações:</h2>
+            <select name="automacoes" id="id_automacoes" multiple>
+                {% for automacao in automacoes %}
+                    <option value="{{ automacao.id }}">{{ automacao.nome }}</option>
+                {% endfor %}
+            </select>
+        {% else %}
+            <p>Nenhuma automação encontrada</p>
+        {% endif %}
+
         <button type="submit">Salvar</button>
     </form>
 {% endblock %}

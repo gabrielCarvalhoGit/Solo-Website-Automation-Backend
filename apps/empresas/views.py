@@ -8,8 +8,9 @@ from django.contrib.auth.decorators import login_required, permission_required
 
 from .models import Empresa
 from .tasks import enviar_email_empresa
-from .utils import generate_refresh_token
 from .forms import EmpresaCreateForm, EmpresaEditForm
+from .utils import generate_refresh_token, set_automacoes_empresa
+from apps.automacoes.models import Automacao
 from apps.accounts.models import User
 
 
@@ -23,6 +24,8 @@ def list_empresas(request):
 @login_required(login_url='/accounts/login')
 @permission_required('empresas.add_empresa', login_url='/accounts/login', raise_exception=False)
 def create_empresa(request):
+    automacoes = Automacao.objects.all()
+
     if request.method == 'POST':
         form = EmpresaCreateForm(request.POST)
 
@@ -37,6 +40,7 @@ def create_empresa(request):
                 return redirect('adicionar-empresa')
             
             empresa.save()
+            set_automacoes_empresa(request, empresa)
 
             password_temp = User.objects.make_random_password(length=10)
             user = User.objects.create_user(
@@ -49,41 +53,44 @@ def create_empresa(request):
             token = generate_refresh_token(user)
 
             link_redefinicao = f"{settings.SITE_URL}/accounts/reset-password/?token={token}"
-            #enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
+            enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
 
-            html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
-            text_content = strip_tags(html_content)
+            # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
+            # text_content = strip_tags(html_content)
 
-            email = EmailMultiAlternatives(
-                'Solo Solutions - Mudar senha do usuário',
-                text_content,
-                settings.EMAIL_HOST_USER,
-                [email]
-            )
-            email.attach_alternative(html_content, 'text/html')
-            email.send()
+            # email = EmailMultiAlternatives(
+            #     'Solo Solutions - Mudar senha do usuário',
+            #     text_content,
+            #     settings.EMAIL_HOST_USER,
+            #     [email]
+            # )
+            # email.attach_alternative(html_content, 'text/html')
+            # email.send()
 
             return redirect('empresas-cadastradas')
         
     form = EmpresaCreateForm()
-    return render(request, 'empresas/add_empresa.html', {'form': form})
+    return render(request, 'empresas/add_empresa.html', {'form': form, 'automacoes': automacoes})
 
 @login_required(login_url='/accounts/login')
 @permission_required('empresas.change_empresa', login_url='/accounts/login', raise_exception=False)
 def edit_empresa(request, id):
     empresa = get_object_or_404(Empresa, pk=id)
+    automacoes = Automacao.objects.all()
     form = EmpresaEditForm(instance=empresa)
 
     if request.method == 'POST':
         form = EmpresaEditForm(request.POST, instance=empresa)
 
         if form.is_valid():
-            form.save()
+            empresa = form.save()
+            set_automacoes_empresa(request, empresa)
+
             return redirect('empresas-cadastradas')
         else:
-            return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa})
+            return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa, 'automacoes': automacoes})
     else:
-        return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa})
+        return render(request, 'empresas/edit_empresa.html', {'form': form, 'empresa': empresa, 'automacoes': automacoes})
     
 @login_required(login_url='/accounts/login')
 @permission_required('empresas.delete_empresas', login_url='/accounts/login', raise_exception=False)

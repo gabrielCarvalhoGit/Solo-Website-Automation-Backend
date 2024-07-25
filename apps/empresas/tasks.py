@@ -6,14 +6,6 @@ from django.core.mail import EmailMultiAlternatives
 
 
 @shared_task
-def add(x, y):
-    return x + y
-
-@shared_task
-def mul(x, y):
-    return x * y
-
-@shared_task
 def enviar_email_empresa(empresa, email, link_redefinicao):
     html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
     text_content = strip_tags(html_content)
