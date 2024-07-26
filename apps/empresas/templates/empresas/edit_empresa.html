@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_tags %}
 {% block title %}Editar Empresa{% endblock %}
 
 {% block main %}
@@ -8,15 +9,18 @@
         {% csrf_token %}
         {{ form.as_p }}
 
-        {% if automacoes %}
-            <h2>Selecione as Automações:</h2>
-            <select name="automacoes" id="id_automacoes" multiple>
-                {% for automacao in automacoes %}
-                    <option value="{{ automacao.id }}">{{ automacao.nome }}</option>
-                {% endfor %}
-            </select>
-        {% else %}
-            <p>Nenhuma automação encontrada</p>
+        {% if request.user|is_solo_admin %}
+            {% if automacoes %}
+                <h2>Selecione as Automações:</h2>
+
+                <select name="automacoes" id="id_automacoes" multiple>
+                    {% for automacao in automacoes %}
+                        <option value="{{ automacao.id }}">{{ automacao.nome }}</option>
+                    {% endfor %}
+                </select>
+            {% else %}
+                <p>Nenhuma automação encontrada</p>
+            {% endif %}
         {% endif %}
 
         <input type="submit" class="btn btn-success" value="Editar empresa">
