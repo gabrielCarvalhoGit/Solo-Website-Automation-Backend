@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load custom_tags %}
+{% block title %}Automações RPA{% endblock %}
+
+{% block main %}
+    <h1>Automações</h1>
+    <br>
+
+    {% if automacoes %}
+        <ul class="automacoes__list">
+            {% for automacao in automacoes %}
+                <li class="automacao__item">
+                    {{automacao}}
+
+                    {% if request.user|is_solo_admin %}
+                        <a href="{% url 'editar-automacao' automacao.id %}" class="btn btn-info">Editar</a>
+                        <a href="{% url 'excluir-automacao' automacao.id %}" class="btn btn-danger">Excluir</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhuma automação encontrada</p>
+    {% endif %}
+
+    {% if request.user|is_solo_admin %}
+        <a id="add-link" href="{% url 'adicionar-automacao' %}">
+            <div class="col-2 add-div">
+                <i class="fas fa-plus">Adicionar Automação</i>
+            </div>
+        </a>
+    {% endif %}
+{% endblock %}

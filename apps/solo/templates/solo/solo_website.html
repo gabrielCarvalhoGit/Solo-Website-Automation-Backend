@@ -26,11 +26,18 @@
 
     {% if request.user|is_solo_admin %}
         <ul class="list_solo_admin_functions">
-            <li class="function_item"><a href="{% url 'empresas-cadastradas' %}">Empresas Cadastradas</a></li>
+            <li class="empresas_item"><a href="{% url 'empresas-cadastradas' %}">Empresas Cadastradas</a></li>
+            <li class="automacoes_item"><a href="{% url 'automacoes-rpa' %}">Automações</a></li>
         </ul>
     {% elif request.user|is_resp_empresa %}
         <ul class="list_resp_empresa_functions">
             <li clas="function_item"><a href="{% url 'editar-empresa' request.user.empresa.id %}">Editar Minha Empresa</a></li>
+        </ul>
+    {% endif %}
+
+    {% if not request.user|is_solo_admin %}
+        <ul class="list_automacoes">
+            <li class="automacoes_item"><a href="{% url 'automacoes-rpa-empresa' %}">Minhas Automações</a></li>
         </ul>
     {% endif %}
 {% endblock %}

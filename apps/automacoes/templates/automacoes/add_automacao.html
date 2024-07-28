@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Adicionar Automação{% endblock %}
+
+{% block main %}
+    <h1>Adicionar Automação</h1>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button type="submit">Salvar</button>
+    </form>
+{% endblock %}
