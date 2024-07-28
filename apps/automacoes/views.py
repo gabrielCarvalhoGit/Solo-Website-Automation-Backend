@@ -47,7 +47,7 @@ def edit_automacao(request, id):
             descricao = form.cleaned_data['descricao']
             arquivo = form.cleaned_data['arquivo']
 
-            editar_automacao.delay(id=automacao.id, nome=nome, descricao=descricao, arquivo=arquivo)
+            editar_automacao.delay(id=automacao.id, nome=nome, descricao=descricao, arquivo=arquivo.path)
             return redirect('automacoes-rpa')
         else:
             return render(request, 'automacoes/edit_automacao.html', {'form': form, 'automacao': automacao})
