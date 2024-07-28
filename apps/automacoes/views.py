@@ -25,7 +25,7 @@ def create_automacao(request):
         if form.is_valid():
             nome = form.cleaned_data['nome']
             descricao = form.cleaned_data['descricao']
-            arquivo = form.cleaned_data['arquivo']
+            arquivo = request.FILES
 
             criar_automacao.delay(nome, descricao, arquivo.path)
             return redirect('automacoes-rpa')
@@ -45,7 +45,7 @@ def edit_automacao(request, id):
         if form.is_valid():
             nome = form.cleaned_data['nome']
             descricao = form.cleaned_data['descricao']
-            arquivo = form.cleaned_data['arquivo']
+            arquivo = request.FILES
 
             editar_automacao.delay(id=automacao.id, nome=nome, descricao=descricao, arquivo=arquivo.path)
             return redirect('automacoes-rpa')
