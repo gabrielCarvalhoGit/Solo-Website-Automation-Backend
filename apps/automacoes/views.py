@@ -1,4 +1,6 @@
+import mimetypes
 from django.contrib import messages
+from django.http import HttpResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 
@@ -10,12 +12,6 @@ from .forms import AutomacaoForm
 @permission_required('automacoes.view_automacao', login_url='/accounts/login', raise_exception=False)
 def list_automacoes(request):
     automacoes = Automacao.objects.all().order_by('created_at')
-
-    return render(request, 'automacoes/list_automacoes.html', {'automacoes': automacoes})
-
-@login_required(login_url='/accounts/login')
-def list_automacoes_empresa(request):
-    automacoes = request.user.empresa.automacoes.all()
 
     return render(request, 'automacoes/list_automacoes.html', {'automacoes': automacoes})
 
@@ -59,3 +55,24 @@ def delete_automacao(request, id):
 
     messages.info(request, 'Automação excluída com sucesso')
     return redirect('automacoes-rpa')
+
+@login_required(login_url='/accounts/login')
+def list_automacoes_empresa(request):
+    automacoes = request.user.empresa.automacoes.all()
+
+    return render(request, 'automacoes/list_automacoes.html', {'automacoes': automacoes})
+
+@login_required(login_url='/accounts/login')
+def download_automacao(request, id):
+    automacao = get_object_or_404(Automacao, pk=id)
+    path_automacao = automacao.arquivo.path
+    nome_arquivo_download = automacao.nome.replace(' ', '_') + '.exe'
+
+    try:
+        with open(path_automacao, 'rb') as f:
+            mime_type, _ = mimetypes.guess_type(path_automacao)
+            response = HttpResponse(f, content_type=mime_type)
+            response['Content-Disposition'] = f'attachment; filename={nome_arquivo_download}'
+            return response
+    except FileNotFoundError:
+        raise Http404("Arquivo não encontrado")
