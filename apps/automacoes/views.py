@@ -25,9 +25,11 @@ def create_automacao(request):
         if form.is_valid():
             nome = form.cleaned_data['nome']
             descricao = form.cleaned_data['descricao']
-            arquivo = request.FILES
+            arquivo = request.FILES['arquivo']
 
-            criar_automacao.delay(nome, descricao, arquivo.path)
+            criar_automacao.delay(nome, descricao, arquivo.name, arquivo.temporary_file_path())
+
+            messages.success('Automação adicionada com sucesso.')
             return redirect('automacoes-rpa')
     
     form = AutomacaoForm()
