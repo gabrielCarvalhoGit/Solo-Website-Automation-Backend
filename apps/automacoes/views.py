@@ -6,7 +6,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 
 from .models import Automacao
 from .forms import AutomacaoForm
-from .tasks import criar_automacao, editar_automacao
 
 
 @login_required(login_url='/accounts/login')
@@ -23,13 +22,9 @@ def create_automacao(request):
         form = AutomacaoForm(request.POST, request.FILES)
 
         if form.is_valid():
-            nome = form.cleaned_data['nome']
-            descricao = form.cleaned_data['descricao']
-            arquivo = request.FILES['arquivo']
+            automacao = form.save(commit=False)
+            automacao.save()
 
-            criar_automacao.delay(nome, descricao, arquivo.name, arquivo.temporary_file_path())
-
-            messages.success(request, 'Automação adicionada com sucesso.')
             return redirect('automacoes-rpa')
     
     form = AutomacaoForm()
@@ -45,11 +40,8 @@ def edit_automacao(request, id):
         form = AutomacaoForm(request.POST, instance=automacao)
 
         if form.is_valid():
-            nome = form.cleaned_data['nome']
-            descricao = form.cleaned_data['descricao']
-            arquivo = request.FILES
-
-            editar_automacao.delay(id=automacao.id, nome=nome, descricao=descricao, arquivo=arquivo.path)
+            automacao = form.save(commit=False)
+            automacao.save()
             return redirect('automacoes-rpa')
         else:
             return render(request, 'automacoes/edit_automacao.html', {'form': form, 'automacao': automacao})
