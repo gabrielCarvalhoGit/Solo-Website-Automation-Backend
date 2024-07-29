@@ -29,7 +29,7 @@ def create_automacao(request):
 
             criar_automacao.delay(nome, descricao, arquivo.name, arquivo.temporary_file_path())
 
-            messages.success('Automação adicionada com sucesso.')
+            messages.success(request, 'Automação adicionada com sucesso.')
             return redirect('automacoes-rpa')
     
     form = AutomacaoForm()
