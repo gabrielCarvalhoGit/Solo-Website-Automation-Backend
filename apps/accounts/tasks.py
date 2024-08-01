@@ -14,7 +14,7 @@ def send_email_user(user, link):
         'Solo Solutions - Mudar senha do usuário',
         text_content,
         settings.EMAIL_HOST_USER,
-        [user.email]
+        [user]
     )
     email.attach_alternative(html_content, 'text/html')
     email.send()
