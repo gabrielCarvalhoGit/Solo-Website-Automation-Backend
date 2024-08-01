@@ -33,7 +33,7 @@ def create_user(request):
             token = generate_refresh_token(user)
             link_redefinicao = f"{settings.SITE_URL}/accounts/reset-password/?token={token}"
 
-            send_email_user.delay(user, link_redefinicao)
+            send_email_user.delay(user.email, link_redefinicao)
             
             # html_content = render_to_string('email/email_reset_user.html', {'user': user, 'link': link_redefinicao})
             # text_content = strip_tags(html_content)
