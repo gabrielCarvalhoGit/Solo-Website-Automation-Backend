@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 
 from .models import User
+from .tasks import send_email_user
 from .forms import ResetPasswordForm, CreateUserForm
 from .utils import generate_refresh_token, validate_jwt_token
 
@@ -31,18 +32,20 @@ def create_user(request):
 
             token = generate_refresh_token(user)
             link_redefinicao = f"{settings.SITE_URL}/accounts/reset-password/?token={token}"
-            
-            html_content = render_to_string('email/email_reset_user.html', {'user': user, 'link': link_redefinicao})
-            text_content = strip_tags(html_content)
 
-            email = EmailMultiAlternatives(
-                'Solo Solutions - Mudar senha do usuário',
-                text_content,
-                settings.EMAIL_HOST_USER,
-                [user.email]
-            )
-            email.attach_alternative(html_content, 'text/html')
-            email.send()
+            send_email_user.delay(user, link_redefinicao)
+            
+            # html_content = render_to_string('email/email_reset_user.html', {'user': user, 'link': link_redefinicao})
+            # text_content = strip_tags(html_content)
+
+            # email = EmailMultiAlternatives(
+            #     'Solo Solutions - Mudar senha do usuário',
+            #     text_content,
+            #     settings.EMAIL_HOST_USER,
+            #     [user.email]
+            # )
+            # email.attach_alternative(html_content, 'text/html')
+            # email.send()
 
             return redirect('usuarios-cadastrados')
     
