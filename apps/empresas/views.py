@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from .models import Empresa
 from .tasks import enviar_email_empresa
 from .forms import EmpresaCreateForm, EmpresaEditForm
-from .utils import generate_refresh_token, set_automacoes_empresa
+from .utils import generate_temp_password, generate_refresh_token, set_automacoes_empresa
 from apps.automacoes.models import Automacao
 from apps.accounts.models import User
 
@@ -32,40 +32,35 @@ def create_empresa(request):
         if form.is_valid():
             empresa = form.save(commit=False)
             email = form.cleaned_data['email']
-
-            is_user = User.objects.filter(email=email).exists()
-
-            if is_user:
-                messages.error(request, 'O e-mail informado já está associado a um usuário existente.')
-                return redirect('adicionar-empresa')
             
             empresa.save()
             set_automacoes_empresa(request, empresa)
 
-            password_temp = User.objects.make_random_password(length=10)
+            password_temp = generate_temp_password()
             user = User.objects.create_user(
                 email=email,
                 password=password_temp,
-                empresa_id=empresa.id
+                empresa_id=empresa.id,
+                is_admin_empresa=True
             )
             user.save()
 
             token = generate_refresh_token(user)
 
             link_redefinicao = f"{settings.SITE_URL}/accounts/reset-password/?token={token}"
-            enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
+            #enviar_email_empresa.delay(empresa.nome, email, link_redefinicao)
 
-            # html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
-            # text_content = strip_tags(html_content)
+            html_content = render_to_string('email/email_empresa_cadastrada.html', {'empresa': empresa, 'link': link_redefinicao})
+            text_content = strip_tags(html_content)
 
-            # email = EmailMultiAlternatives(
-            #     'Solo Solutions - Mudar senha do usuário',
-            #     text_content,
-            #     settings.EMAIL_HOST_USER,
-            #     [email]
-            # )
-            # email.attach_alternative(html_content, 'text/html')
-            # email.send()
+            email = EmailMultiAlternatives(
+                'Solo Solutions - Mudar senha do usuário',
+                text_content,
+                settings.EMAIL_HOST_USER,
+                [email]
+            )
+            email.attach_alternative(html_content, 'text/html')
+            email.send()
 
             return redirect('empresas-cadastradas')
         

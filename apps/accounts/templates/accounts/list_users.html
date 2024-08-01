@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Usuários{% endblock %}
+
+{% block main %}
+    <h1>Usuários</h1>
+    <br>
+
+    {% if users %}
+        <ul class="users__list">
+            {% for user in users %}
+                <li class="user__item">
+                    {{user}}
+                    <a href="{% url 'excluir-usuario' user.id %}" class="btn btn-danger">Excluir</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhum usuário cadastrado na empresa</p>
+    {% endif %}
+
+    <a id="add-link" href="{% url 'adicionar-usuario' %}">
+        <div class="col-2 add-div">
+            <i class="fas fa-plus">Adicionar Usuário</i>
+        </div>
+    </a>
+{% endblock %}

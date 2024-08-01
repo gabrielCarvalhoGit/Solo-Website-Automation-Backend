@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                color: #ffffff;
+                background-image: url('https://raw.githubusercontent.com/gabrielCarvalhoGit/Solo-Website-Automation-Backend/main/public/gradient.jpg'); 
+                background-size: cover; 
+                background-repeat: no-repeat;
+            }
+
+            .container {
+                width: 100%;
+                max-width: 600px;
+                margin: auto;
+                text-align: center;
+                color: #333333;
+            }
+
+            .header {
+                padding: 20px;
+                color: #ffffff;
+            }
+
+            .logo {
+                width: 150px;
+                margin-bottom: 10px;
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .content {
+                text-align: left;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                overflow: hidden;
+                background-color: #ffffff;
+                padding: 40px;
+                margin: 0 auto;
+            }
+
+            .content h2 {
+                margin-top: 0;
+            }
+
+            .content p {
+                margin: 10px 0;
+            }
+
+            .btn {
+                display: inline-block;
+                margin-top: 10px;
+                padding: 15px 40px;
+                font-size: 16px;
+                text-align: center;
+                text-decoration: none;
+                color: #ffffff !important;
+                background: #1472FF;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+            }
+            
+            .btn-link {
+                text-align: center;
+            }
+
+            .btn:hover {
+                background: #0066ff;
+            }
+        </style>
+    </head>
+    <body style="background-image: url('https://raw.githubusercontent.com/gabrielCarvalhoGit/Solo-Website-Automation-Backend/main/public/gradient.jpg'); background-size: cover; background-repeat: no-repeat; 
+                height: 100vh; display: flex; justify-content: center; align-items: center; font-family: Arial, sans-serif; margin: 0; padding: 0; color: #ffffff;">
+
+        <div class="container">
+            <div class="header">
+                <img src="https://raw.githubusercontent.com/gabrielCarvalhoGit/Solo-Website-Automation-Backend/main/public/solo-logo-white.png" alt="Tabnine Logo" class="logo">
+                <h1>Seu usuário foi cadastrado!</h1>
+            </div>
+            <div class="content">
+                <h2>Solo Solutions</h2>
+                <p>Olá {{user}}!</p>
+                <p>Obrigado por fazer parte dos nossos serviços! Antes de começarmos, precisamos que você mude a senha do seu usuário.</p>
+                
+                <div class="btn-link">
+                    <a href="{{ link }}" class="btn">Mudar Senha</a>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

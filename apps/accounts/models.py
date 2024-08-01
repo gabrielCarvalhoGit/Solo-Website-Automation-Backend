@@ -29,6 +29,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_admin_empresa = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     objects = CustomUserManager()
@@ -43,9 +44,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def clean(self):
         super().clean()
-
-        if not self.is_superuser and User.objects.filter(empresa=self.empresa).exclude(pk=self.pk).exists():
-            raise ValidationError('Já existe um usuário associado a esta empresa.')
 
     def __str__(self):
         return self.email

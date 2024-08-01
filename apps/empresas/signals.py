@@ -7,6 +7,6 @@ from apps.accounts.models import User
 
 @receiver(post_save, sender=User)
 def add_user_group(sender, instance, created, **kwargs):
-    if created:
+    if created and instance.is_admin_empresa:
         group = Group.objects.get(name='resp_empresa')
         instance.groups.add(group)

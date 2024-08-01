@@ -32,6 +32,7 @@
     {% elif request.user|is_resp_empresa %}
         <ul class="list_resp_empresa_functions">
             <li clas="function_item"><a href="{% url 'editar-empresa' request.user.empresa.id %}">Editar Minha Empresa</a></li>
+            <li class="function_item"><a href="{% url 'usuarios-cadastrados' %}">Usuários</a></li>
         </ul>
     {% endif %}
 
