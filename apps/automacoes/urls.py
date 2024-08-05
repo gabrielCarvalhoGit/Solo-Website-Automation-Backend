@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import list_automacoes, create_automacao, edit_automacao, delete_automacao, list_automacoes_empresa, download_automacao
+from .views import (list_automacoes, create_automacao, edit_automacao, delete_automacao, list_automacoes_empresa, download_automacao)
 
 
 urlpatterns = [

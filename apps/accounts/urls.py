@@ -1,6 +1,6 @@
 from django.urls import path, include
 
-from .views import reset_password, list_users, create_user, delete_user
+from .views import (reset_password, list_users, create_user, delete_user)
 
 
 urlpatterns = [
