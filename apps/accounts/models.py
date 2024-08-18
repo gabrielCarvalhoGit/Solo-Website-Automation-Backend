@@ -24,12 +24,12 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True)
-    email = models.EmailField(unique=True)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    is_admin_empresa = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(auto_now_add=True)
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True) # Relacionamento com a tabela empresas
+    email = models.EmailField(unique=True) # importante
+    is_active = models.BooleanField(default=True) # padrão do django
+    is_staff = models.BooleanField(default=False) # padrão do django
+    is_admin_empresa = models.BooleanField(default=False) # verificar
+    date_joined = models.DateTimeField(auto_now_add=True) # padrão do django
 
     objects = CustomUserManager()
 
