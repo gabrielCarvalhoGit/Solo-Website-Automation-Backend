@@ -53,7 +53,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
             value=access,
             httponly=True,
             secure=False,
-            samesite='None'
+            samesite='Lax'
         )
 
         response.set_cookie(
@@ -61,7 +61,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
             value=refresh,
             httponly=True,
             secure=False,
-            samesite='None'
+            samesite='Lax'
         )
 
         return response
@@ -79,7 +79,7 @@ def get_cookies_access_token(request):
     except TokenError:
         return Response({'Detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
     
-    return Response({'Acess_token': access_token}, status=status.HTTP_200_OK)
+    return Response({'Access_token': access_token}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_routes(request):
