@@ -61,7 +61,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
             value=refresh,
             httponly=True,
             secure=False,
-            samesite='Lax'
+            samesite='None'
         )
 
         return response
