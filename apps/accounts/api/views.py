@@ -53,7 +53,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
             value=access,
             httponly=True,
             secure=False,
-            samesite='Lax'
+            samesite='None'
         )
 
         response.set_cookie(
