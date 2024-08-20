@@ -54,16 +54,16 @@ class MyTokenObtainPairView(TokenObtainPairView):
             key='access_token',
             value=access,
             httponly=True,
-            secure=False,
-            samesite='Lax'
+            secure=True,
+            samesite='None'
         )
 
         response.set_cookie(
             key='refresh_token',
             value=refresh,
             httponly=True,
-            secure=False,
-            samesite='Lax'
+            secure=True,
+            samesite='None'
         )
 
         return response
