@@ -9,7 +9,6 @@ def generate_refresh_token(user):
     token = RefreshToken.for_user(user)
     return str(token)
 
-def set_automacoes_empresa(request, empresa):
-    if 'automacoes' in request.POST:
-        automacao_ids = request.POST.getlist('automacoes')
-        empresa.automacoes.set(automacao_ids)
+def set_automacoes(list_automacoes, empresa):
+    if list_automacoes:
+        empresa.automacoes.set(list_automacoes)
