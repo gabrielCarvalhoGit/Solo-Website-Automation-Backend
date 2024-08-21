@@ -10,6 +10,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -51,22 +52,22 @@ class MyTokenObtainPairView(TokenObtainPairView):
             key='access_token',
             value=access,
             httponly=True,
-            secure=False,
-            samesite='Lax'
+            secure=True,
+            samesite='None'
         )
 
         response.set_cookie(
             key='refresh_token',
             value=refresh,
             httponly=True,
-            secure=False,
-            samesite='Lax'
+            secure=True,
+            samesite='None'
         )
 
         return response
 
 @api_view(['GET'])
-def get_cookies_access_token(request):
+def get_user_session(request):
     access_token = request.COOKIES.get('access_token')
 
     if not access_token:
@@ -74,11 +75,11 @@ def get_cookies_access_token(request):
 
     try:
         token = AccessToken(access_token)
-        user = token['user_id']
+        email = token.get('email')  # Obtém o e-mail do token
     except TokenError:
         return Response({'Detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
     
-    return Response({'Access_token': access_token}, status=status.HTTP_200_OK)
+    return Response({'Access_token': access_token, 'Email': email}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def refresh_access_token(request):
@@ -103,21 +104,30 @@ def refresh_access_token(request):
     
 @api_view(['POST'])
 def logout_user(request):
-    response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
-    
-    # Remove os cookies de autenticação
-    response.delete_cookie('access_token')
-    response.delete_cookie('refresh_token')
-    
-    return response
+    try:
+        refresh_token = request.COOKIES.get('refresh_token')
 
+        if refresh_token:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+        response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+
+        return response
+    except TokenError as e:
+        return Response({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
 @api_view(['GET'])
 def get_routes(request):
     routes = [
         '/api/token',
         '/api/token/logout',
         '/api/token/refresh',
-        '/api/token/get-cookies-token'
+        '/api/token/get-user-session'
     ]
 
     return Response(routes)
