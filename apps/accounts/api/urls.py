@@ -1,15 +1,14 @@
 from django.urls import path
-from .views import get_routes, get_user_session, MyTokenObtainPairView
+from .views import MyTokenObtainPairView, refresh_access_token, get_user_session, get_routes, logout_user
 
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
 
 
 urlpatterns = [
     path('', get_routes),
-    path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', refresh_access_token, name='token_refresh'),
     path('api/token/logout/', logout_user, name='logout_user'),
-    path('get-user-session/', get_user_session, name='get_user')
+    path('api/token/get-user-session/', get_user_session, name='get_user_session'),
+    
 ]
