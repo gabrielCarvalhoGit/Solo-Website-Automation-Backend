@@ -21,8 +21,8 @@ class TokenRefreshMiddleware(MiddlewareMixin):
                             key='access_token',
                             value=new_access_token,
                             httponly=True,
-                            secure=False,
-                            samesite='Lax'
+                            secure=True,
+                            samesite='None'
                         )
 
                         return response
