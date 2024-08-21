@@ -108,6 +108,31 @@ def logout_user(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+def update_user_name(request):
+    access_token = request.COOKIES.get('access_token')
+    
+    if not access_token:
+        return Response({'detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        token = AccessToken(access_token)
+        user_id = token['user_id']
+        user = User.objects.get(id=user_id)
+        
+        serializer = UpdateUserNameSerializer(data=request.data)
+        if serializer.is_valid():
+            user.nome = serializer.validated_data['nome']
+            user.save()
+            return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    except TokenError:
+        return Response({'detail': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
 @api_view(['GET'])
 def get_user_session(request):
     access_token = request.COOKIES.get('access_token')
@@ -124,31 +149,6 @@ def get_user_session(request):
     except TokenError:
         return Response({'Detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
     
-@api_view(['POST'])
-def update_user_name(request):
-    access_token = request.COOKIES.get('access_token')
-    
-    if not access_token:
-        return Response({'detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    try:
-        token = AccessToken(access_token)
-        user_id = token['user_id']  # Obtenha o ID do usuário a partir do token
-        user = User.objects.get(id=user_id)  # Carregue o usuário usando o ID do token
-        
-        serializer = UpdateUserNameSerializer(data=request.data)
-        if serializer.is_valid():
-            user.nome = serializer.validated_data['nome']  # Atualize o nome do usuário
-            user.save()
-            return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    except TokenError:
-        return Response({'detail': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-    
 @api_view(['GET'])
 def get_routes(request):
     routes = [
@@ -156,6 +156,6 @@ def get_routes(request):
         '/api/accounts/token/logout',
         '/api/accounts/token/refresh',
         '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name',  # Nova rota para atualizar o nome do usuário
+        '/api/accounts/update-user-name',
     ]
     return Response(routes)
