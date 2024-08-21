@@ -89,6 +89,15 @@ def refresh_access_token(request):
     except TokenError:
         return Response({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
 
+@api_view(['POST'])
+def logout_user(request):
+    response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+
+    response.delete_cookie('access_token')
+    response.delete_cookie('refresh_token')
+    
+    return response
+
 @api_view(['GET'])
 def get_user_session(request):
     access_token = request.COOKIES.get('access_token')
@@ -106,17 +115,6 @@ def get_user_session(request):
         return Response({'detail': 'Token inválido.'}, status=status.HTTP_401_UNAUTHORIZED)
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['POST'])
-def logout_user(request):
-    response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
-    
-    # Remove os cookies de autenticação
-    response.delete_cookie('access_token')
-    response.delete_cookie('refresh_token')
-    
-    return response
-
 
 @api_view(['GET'])
 def get_routes(request):

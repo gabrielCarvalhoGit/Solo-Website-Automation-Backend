@@ -25,6 +25,7 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True) # Relacionamento com a tabela empresas
+    nome = models.CharField(max_length=100, default='admin')
     email = models.EmailField(unique=True) # importante
     is_active = models.BooleanField(default=True) # padrão do django
     is_staff = models.BooleanField(default=False) # padrão do django
