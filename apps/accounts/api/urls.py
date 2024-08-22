@@ -2,7 +2,7 @@ from django.urls import path
 from .views import MyTokenObtainPairView, refresh_access_token, logout_user, get_user_session, get_routes, update_user_name
 
 urlpatterns = [
-    path('', get_routes, name='api_root),
+    path('', get_routes, name='api_root'),
     path('update-user-name/', update_user_name, name='update_user_name'),
     
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
