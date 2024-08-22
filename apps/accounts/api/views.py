@@ -106,7 +106,7 @@ def logout_user(request):
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-def get_user_session(request):
+def get_user_data(request):
     access_token = request.COOKIES.get('access_token')
 
     if not access_token:
@@ -116,7 +116,7 @@ def get_user_session(request):
         token = AccessToken(access_token)
         user_id = token['user_id']
         user = User.objects.get(id=user_id)
-        return JsonResponse({'Email': user.email, 'Nome': user.nome})
+        return JsonResponse({'email': user.email, 'nome': user.nome})
     except TokenError:
         return JsonResponse({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
     except User.DoesNotExist:
@@ -137,7 +137,7 @@ def update_user_name(request):
         user = User.objects.get(id=user_id)
         
         serializer = UpdateUserNameSerializer(data=request.data)
-        if serializer.is_valid():
+        if (serializer.is_valid()):
             user.nome = serializer.validated_data['nome']
             user.save()
             return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
@@ -152,10 +152,10 @@ def update_user_name(request):
 @api_view(['GET'])
 def get_routes(request):
     routes = [
-        '/api/accounts/token',
-        '/api/accounts/token/logout',
-        '/api/accounts/token/refresh',
-        '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name',
+        '/accounts/token',
+        '/accounts/token/logout',
+        '/accounts/token/refresh',
+        '/accounts/update-user-name',
+        '/accounts/token/get-user-data',
     ]
     return Response(routes)
