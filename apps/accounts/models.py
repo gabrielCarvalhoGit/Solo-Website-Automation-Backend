@@ -24,13 +24,16 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True) # Relacionamento com a tabela empresas
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True)
+
     nome = models.CharField(max_length=100, default='admin')
-    email = models.EmailField(unique=True) # importante
-    is_active = models.BooleanField(default=True) # padrão do django
-    is_staff = models.BooleanField(default=False) # padrão do django
-    is_admin_empresa = models.BooleanField(default=False) # verificar
-    date_joined = models.DateTimeField(auto_now_add=True) # padrão do django
+    email = models.EmailField(unique=True)
+    profile_picture = models.ImageField(upload_to='profile', null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_admin_empresa = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
 
     objects = CustomUserManager()
 

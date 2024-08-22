@@ -156,6 +156,6 @@ def get_routes(request):
         '/api/accounts/token/logout',
         '/api/accounts/token/refresh',
         '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name',  # Nova rota para atualização do nome do usuário
+        '/api/accounts/update-user-name',
     ]
     return Response(routes)
