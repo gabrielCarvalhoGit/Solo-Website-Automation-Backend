@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate
 from ..models import User
 from rest_framework import status, serializers
 from rest_framework.response import Response
+from datetime import datetime, timedelta
 from rest_framework.decorators import api_view
 from rest_framework_simplejwt.exceptions import TokenError
 from django.http import JsonResponse
@@ -89,15 +90,29 @@ def refresh_access_token(request):
 @api_view(['POST'])
 def logout_user(request):
     try:
-        refresh_token = request.COOKIES.get('refresh_token')
 
+        refresh_token = request.COOKIES.get('refresh_token')
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
 
         response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
-        response.delete_cookie('access_token')
-        response.delete_cookie('refresh_token')
+        response.set_cookie(
+            key='refresh_token',
+            value='',
+            expires=datetime.utcnow() - timedelta(days=1),
+            httponly=True,
+            secure=True,
+            samesite='None'
+        )
+        response.set_cookie(
+            key='access_token',
+            value='',
+            expires=datetime.utcnow() - timedelta(days=1),
+            httponly=True,
+            secure=True,
+            samesite='None'
+        )
 
         return response
     except TokenError:
@@ -106,7 +121,7 @@ def logout_user(request):
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-def get_user_data(request):
+def get_user_session(request):
     access_token = request.COOKIES.get('access_token')
 
     if not access_token:
@@ -116,7 +131,7 @@ def get_user_data(request):
         token = AccessToken(access_token)
         user_id = token['user_id']
         user = User.objects.get(id=user_id)
-        return JsonResponse({'email': user.email, 'nome': user.nome})
+        return JsonResponse({'Email': user.email, 'Nome': user.nome})
     except TokenError:
         return JsonResponse({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
     except User.DoesNotExist:
@@ -137,7 +152,7 @@ def update_user_name(request):
         user = User.objects.get(id=user_id)
         
         serializer = UpdateUserNameSerializer(data=request.data)
-        if (serializer.is_valid()):
+        if serializer.is_valid():
             user.nome = serializer.validated_data['nome']
             user.save()
             return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
@@ -152,10 +167,10 @@ def update_user_name(request):
 @api_view(['GET'])
 def get_routes(request):
     routes = [
-        '/accounts/token',
-        '/accounts/token/logout',
-        '/accounts/token/refresh',
-        '/accounts/update-user-name',
-        '/accounts/token/get-user-data',
+        '/api/accounts/token',
+        '/api/accounts/token/logout',
+        '/api/accounts/token/refresh',
+        '/api/accounts/token/get-user-session',
+        '/api/accounts/update-user-name',  # Nova rota para atualização do nome do usuário
     ]
     return Response(routes)
