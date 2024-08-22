@@ -1,16 +1,14 @@
 from django.contrib.auth import authenticate
 from ..models import User
-from rest_framework import status
-from rest_framework import serializers
+from rest_framework import status, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework_simplejwt.exceptions import TokenError
+from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.response import Response
 from apps.accounts.api.serializers import UpdateUserNameSerializer
-
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -18,9 +16,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['email'] = user.email
         token['nome'] = user.nome
-
         return token
-    
+
     def validate(self, attrs):
         email = attrs.get('email')
         password = attrs.get('password')
@@ -103,10 +100,29 @@ def logout_user(request):
         response.delete_cookie('refresh_token')
 
         return response
-    except TokenError as e:
+    except TokenError:
         return Response({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def get_user_session(request):
+    access_token = request.COOKIES.get('access_token')
+
+    if not access_token:
+        return JsonResponse({'detail': 'Autenticação necessária'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        token = AccessToken(access_token)
+        user_id = token['user_id']
+        user = User.objects.get(id=user_id)
+        return JsonResponse({'Email': user.email, 'Nome': user.nome})
+    except TokenError:
+        return JsonResponse({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
+    except User.DoesNotExist:
+        return JsonResponse({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return JsonResponse({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def update_user_name(request):
@@ -133,22 +149,6 @@ def update_user_name(request):
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['GET'])
-def get_user_session(request):
-    access_token = request.COOKIES.get('access_token')
-
-    if not access_token:
-        return Response({'Detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    try:
-        token = AccessToken(access_token)
-        email = token.get('email')
-        nome = token.get('nome')
-
-        return Response({'Access_token': access_token, 'Email': email, 'Nome': nome}, status=status.HTTP_200_OK)
-    except TokenError:
-        return Response({'Detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
-    
 @api_view(['GET'])
 def get_routes(request):
     routes = [
