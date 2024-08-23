@@ -1,15 +1,20 @@
+from datetime import datetime, timedelta, timezone
 from django.contrib.auth import authenticate
-from ..models import User
+from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.response import Response
 from datetime import datetime, timedelta
 from rest_framework.decorators import api_view
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from apps.accounts.api.serializers import UpdateUserNameSerializer
+
+from ..models import User
+from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -67,8 +72,10 @@ class MyTokenObtainPairView(TokenObtainPairView):
         return response
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def refresh_access_token(request):
     refresh_token = request.COOKIES.get('refresh_token')
+
     if not refresh_token:
         return Response({'detail': 'Refresh token não encontrado'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -88,6 +95,7 @@ def refresh_access_token(request):
         return Response({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
     
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def logout_user(request):
     try:
 
@@ -97,6 +105,24 @@ def logout_user(request):
             token.blacklist()
 
         response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+
+        response.set_cookie(
+            key='access_token',
+            value='',
+            expires=datetime.now(timezone.utc) - timedelta(days=1),
+            httponly=True,
+            secure=True,
+            samesite='None'
+        )
+
+        response.set_cookie(
+            key='refresh_token',
+            value='',
+            expires=datetime.now(timezone.utc) - timedelta(days=1),
+            httponly=True,
+            secure=True,
+            samesite='None'
+        )
         response.set_cookie(
             key='refresh_token',
             value='',
@@ -120,53 +146,86 @@ def logout_user(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
-def get_user_session(request):
-    access_token = request.COOKIES.get('access_token')
-
-    if not access_token:
-        return JsonResponse({'detail': 'Autenticação necessária'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    try:
-        token = AccessToken(access_token)
-        user_id = token['user_id']
-        user = User.objects.get(id=user_id)
-        return JsonResponse({'Email': user.email, 'Nome': user.nome})
-    except TokenError:
-        return JsonResponse({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
-    except User.DoesNotExist:
-        return JsonResponse({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return JsonResponse({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['POST'])
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
 def update_user_name(request):
-    access_token = request.COOKIES.get('access_token')
-    
-    if not access_token:
-        return Response({'detail': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+    user_id = request.user.id
 
     try:
-        token = AccessToken(access_token)
-        user_id = token['user_id']
         user = User.objects.get(id=user_id)
-        
-        serializer = UpdateUserNameSerializer(data=request.data)
+        serializer = UpdateUserNameSerializer(user, data=request.data, partial=True)
+
         if serializer.is_valid():
-            user.nome = serializer.validated_data['nome']
-            user.save()
+            serializer.save()
+
             return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    except TokenError:
-        return Response({'detail': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile_picture(request):
+    user_id = request.user.id
+
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = UpdateProfilePictureSerializer(user, data=request.data, partial=True, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save()
+
+            response_data = serializer.to_representation(user)
+            return Response({
+                'detail': 'Imagem de perfil atualizada com sucesso.',
+                'profile_picture_url': response_data['profile_picture_url']
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def delete_profile_picture(request):
+    user_id = request.user.id
+
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = DeleteProfilePictureSerializer(user, data={'profile_picture': None}, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response({'detail': 'Imagem de perfil removida com sucesso'}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_session(request):
+    user_id = request.user.id
+
+    try:
+        user = User.objects.get(id=user_id)
+        return Response({'email': user.email, 'nome': user.nome})
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_routes(request):
     routes = [
+        '/api/accounts/token/',
+        '/api/accounts/token/logout/',
+        '/api/accounts/token/refresh/',
+        '/api/accounts/token/get-user-session/',
+        '/api/accounts/update-user-name/',
+        '/api/accounts/update-profile-picture/',
+        '/api/accounts/delete-profile-picture/'
         '/api/accounts/token',
         '/api/accounts/token/logout',
         '/api/accounts/token/refresh',
