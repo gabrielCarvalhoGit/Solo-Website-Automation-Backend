@@ -1,16 +1,41 @@
 from rest_framework import serializers
 from ..models import User
 
-class UpdateUserNameSerializer(serializers.Serializer):
+class UpdateUserNameSerializer(serializers.ModelSerializer):
     nome = serializers.CharField(required=True)
 
+    class Meta:
+        model = User
+        fields = ['nome']
+
+    def update(self, instance, validated_data):
+        nome = validated_data.get('nome')
+        instance.nome = nome
+
+        instance.save()
+        return instance
+
 class UpdateProfilePictureSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(required=True)
+
     class Meta:
         model = User
         fields = ['profile_picture']
 
     def update(self, instance, validated_data):
-        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
-        instance.save()
+        profile_picture = validated_data.get('profile_picture')
+        instance.profile_picture = profile_picture
 
+        instance.save()
         return instance
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        if instance.profile_picture:
+            request = self.context.get('request')
+            representation['profile_picture_url'] = request.build_absolute_uri(instance.profile_picture.url)
+        else:
+            representation['profile_picture_url'] = None
+
+        return representation

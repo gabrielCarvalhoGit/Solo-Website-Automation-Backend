@@ -127,18 +127,17 @@ def logout_user(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
+@api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_user_name(request):
     user_id = request.user.id
 
     try:
         user = User.objects.get(id=user_id)
-        serializer = UpdateUserNameSerializer(data=request.data)
+        serializer = UpdateUserNameSerializer(user, data=request.data, partial=True)
 
         if serializer.is_valid():
-            user.nome = serializer.validated_data['nome']
-            user.save()
+            serializer.save()
 
             return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
         
@@ -153,12 +152,16 @@ def update_profile_picture(request):
 
     try:
         user = User.objects.get(id=user_id)
-        serializer = UpdateProfilePictureSerializer(user, data=request.data, partial=True)
+        serializer = UpdateProfilePictureSerializer(user, data=request.data, partial=True, context={'request': request})
 
         if serializer.is_valid():
             serializer.save()
 
-            return Response({'detail': 'Imagem de perfil atualizada com sucesso.'}, status=status.HTTP_200_OK)
+            response_data = serializer.to_representation(user)
+            return Response({
+                'detail': 'Imagem de perfil atualizada com sucesso.',
+                'profile_picture_url': response_data['profile_picture_url']
+            }, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
