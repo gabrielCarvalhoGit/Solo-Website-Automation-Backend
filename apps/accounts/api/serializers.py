@@ -39,3 +39,19 @@ class UpdateProfilePictureSerializer(serializers.ModelSerializer):
             representation['profile_picture_url'] = None
 
         return representation
+    
+class DeleteProfilePictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['profile_picture']
+
+    def update(self, instance, validated_data):
+        if instance.profile_picture:
+            instance.profile_picture.delete(save=False)
+            instance.profile_picture = None
+
+            instance.save()
+        else:
+            raise serializers.ValidationError({'detail': 'O usuário não possui foto de perfil para excluir.'})
+        
+        return instance

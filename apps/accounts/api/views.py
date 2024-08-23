@@ -11,7 +11,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
-from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer
+from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -167,6 +167,24 @@ def update_profile_picture(request):
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def delete_profile_picture(request):
+    user_id = request.user.id
+
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = DeleteProfilePictureSerializer(user, data={'profile_picture': None}, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response({'detail': 'Imagem de perfil removida com sucesso'}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
@@ -188,5 +206,6 @@ def get_routes(request):
         '/api/accounts/token/get-user-session/',
         '/api/accounts/update-user-name/',
         '/api/accounts/update-profile-picture/',
+        '/api/accounts/delete-profile-picture/'
     ]
     return Response(routes)
