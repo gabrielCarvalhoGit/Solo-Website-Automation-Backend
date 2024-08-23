@@ -123,22 +123,6 @@ def logout_user(request):
             secure=True,
             samesite='None'
         )
-        response.set_cookie(
-            key='refresh_token',
-            value='',
-            expires=datetime.utcnow() - timedelta(days=1),
-            httponly=True,
-            secure=True,
-            samesite='None'
-        )
-        response.set_cookie(
-            key='access_token',
-            value='',
-            expires=datetime.utcnow() - timedelta(days=1),
-            httponly=True,
-            secure=True,
-            samesite='None'
-        )
 
         return response
     except TokenError:
