@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MyTokenObtainPairView, refresh_access_token, logout_user, get_user_session, get_routes, update_user_name, update_profile_picture, delete_profile_picture
+from .views import MyTokenObtainPairView, refresh_access_token, logout_user, get_user_session, get_routes, update_user_name, update_profile_picture, delete_profile_picture, request_email_change, confirm_email_change
 
 urlpatterns = [
     path('', get_routes, name='api_root'),  # Rota principal para listar as rotas disponíveis
@@ -9,5 +9,7 @@ urlpatterns = [
     path('update-user-name/', update_user_name, name='update_user_name'),  # Rota para atualizar o nome do usuário
     path('token/get-user-session/', get_user_session, name='get_user_session'),  # Rota para obter a sessão do usuário
     path('delete-profile-picture/', delete_profile_picture, name='delete_profile_picture'),
+    path('api/request-email-change/', request_email_change, name='request-email-change'),
+    path('api/confirm-email-change/', confirm_email_change, name='confirm-email-change'),
     path('update-profile-picture/', update_profile_picture, name='update_profile_picture'),
 ]

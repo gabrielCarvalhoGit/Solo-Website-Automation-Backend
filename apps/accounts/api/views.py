@@ -7,12 +7,18 @@ from datetime import datetime, timedelta
 from rest_framework.decorators import api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-
+from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
+from django.core.mail import send_mail
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.contrib.auth.models import User
+import jwt
+from datetime import datetime, timedelta
+from django.conf import settings
 from ..models import User
 from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
@@ -202,6 +208,59 @@ def get_user_session(request):
         })
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def request_email_change(request):
+    user_id = request.user.id  
+    email_atual = request.data.get('old_email')
+    email_novo = request.data.get('new_email')
+
+    payload = {
+        'user_id': str(user_id), 
+        'email_atual': email_atual,
+        'email_novo': email_novo,
+        'exp': datetime.utcnow() + timedelta(hours=1),
+    }
+
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+    url_confirmacao = f'http://localhost:3000/confirm-email/?token={token}'
+    send_mail(
+        'Confirme sua mudança de e-mail',
+        f'Clique no link para confirmar a mudança de e-mail: {url_confirmacao}',
+        'no-reply@myapp.com',
+        [email_novo],
+        fail_silently=False,
+    )
+
+    return Response({'message': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  
+def confirm_email_change(request):
+    token = request.data.get('token')
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        user_id = payload.get('user_id')
+        email_novo = payload.get('email_novo')
+    except jwt.ExpiredSignatureError:
+        return Response({'error': 'O token expirou.'}, status=status.HTTP_400_BAD_REQUEST)
+    except jwt.InvalidTokenError:
+        return Response({'error': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(id=user_id)
+        user.email = email_novo
+        user.save()
+
+        return Response({'message': 'E-mail atualizado com sucesso.', 'email_novo': email_novo}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_routes(request):
