@@ -191,14 +191,17 @@ def delete_profile_picture(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
-    user_id = request.user.id
-
+    user = request.user
     try:
-        user = User.objects.get(id=user_id)
-        return Response({'email': user.email, 'nome': user.nome})
+        profile_picture_url = user.profile_picture.url if user.profile_picture else None
+        
+        return Response({
+            'email': user.email,
+            'nome': user.nome,
+            'profile_picture': profile_picture_url
+        })
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_routes(request):
@@ -206,13 +209,9 @@ def get_routes(request):
         '/api/accounts/token/',
         '/api/accounts/token/logout/',
         '/api/accounts/token/refresh/',
-        '/api/accounts/token/get-user-session/',
         '/api/accounts/update-user-name/',
         '/api/accounts/update-profile-picture/',
         '/api/accounts/delete-profile-picture/'
-        '/api/accounts/token',
-        '/api/accounts/token/logout',
-        '/api/accounts/token/refresh',
         '/api/accounts/token/get-user-session',
         '/api/accounts/update-user-name',  # Nova rota para atualização do nome do usuário
     ]
