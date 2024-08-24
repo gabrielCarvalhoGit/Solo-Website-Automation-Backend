@@ -21,6 +21,8 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from ..models import User
 from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
+from django.contrib.auth.hashers import check_password, make_password
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -260,6 +262,61 @@ def confirm_email_change(request):
     except User.DoesNotExist:
         return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
+@api_view(['POST'])
+def request_password_reset(request):
+    email = request.data.get('email')
+    user = User.objects.filter(email=email).first()
+
+    if not user:
+        return Response({"error": "Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    payload = {
+        'user_id': str(user.id),
+        'email': user.email,
+        'exp': datetime.utcnow() + timedelta(hours=1),
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+    reset_link = f"http://localhost:3000/reset-password?token={token}"
+    send_mail(
+        'Redefinição de Senha',
+        f'Clique no link para redefinir sua senha: {reset_link}',
+        'noreply@solosolutions.com.br',
+        [user.email],
+        fail_silently=False,
+    )
+
+    return Response({"message": "Reset link sent"}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def reset_password(request):
+    token = request.data.get('token')
+    senha_atual = request.data.get('senha_atual')
+    senha_nova = request.data.get('senha_nova')
+
+    if not all([token, senha_atual, senha_nova]):
+        return Response({"error": "Todos os campos devem ser preenchidos corretamente."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        user_id = payload['user_id']
+        user = User.objects.get(id=user_id)
+
+        if not check_password(senha_atual, user.password):
+            return Response({"error": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Atualiza a senha
+        user.password = make_password(senha_nova)
+        user.save()
+
+        return Response({"message": "Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
+    
+    except jwt.ExpiredSignatureError:
+        return Response({"error": "Token expirado!"}, status=status.HTTP_400_BAD_REQUEST)
+    except jwt.InvalidTokenError:
+        return Response({"error": "Token inválido"}, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({"error": "O usuário não existe"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -270,8 +327,10 @@ def get_routes(request):
         '/api/accounts/token/refresh/',
         '/api/accounts/update-user-name/',
         '/api/accounts/update-profile-picture/',
-        '/api/accounts/delete-profile-picture/'
+        '/api/accounts/delete-profile-picture/',
         '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name',  # Nova rota para atualização do nome do usuário
+        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
+        '/api/accounts/request-password-reset/',  # Nova rota para solicitar redefinição de senha
+        '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
     ]
     return Response(routes)
