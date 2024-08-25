@@ -249,18 +249,18 @@ def confirm_email_change(request):
         user_id = payload.get('user_id')
         email_novo = payload.get('email_novo')
     except jwt.ExpiredSignatureError:
-        return Response({'error': 'O token expirou.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'O token expirou.'}, status=status.HTTP_400_BAD_REQUEST)
     except jwt.InvalidTokenError:
-        return Response({'error': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user = User.objects.get(id=user_id)
         user.email = email_novo
         user.save()
 
-        return Response({'message': 'E-mail atualizado com sucesso.', 'email_novo': email_novo}, status=status.HTTP_200_OK)
+        return Response({'E-mail atualizado com sucesso.'}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 def request_password_reset(request):
@@ -268,7 +268,7 @@ def request_password_reset(request):
     user = User.objects.filter(email=email).first()
 
     if not user:
-        return Response({"error": "Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
     payload = {
         'user_id': str(user.id),
@@ -286,16 +286,21 @@ def request_password_reset(request):
         fail_silently=False,
     )
 
-    return Response({"message": "Reset link sent"}, status=status.HTTP_200_OK)
+    return Response({"message": "Link enviado"}, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 def reset_password(request):
     token = request.data.get('token')
     senha_atual = request.data.get('senha_atual')
     senha_nova = request.data.get('senha_nova')
+    confirm_senha_nova = request.data.get('confirm_senha_nova')
 
-    if not all([token, senha_atual, senha_nova]):
-        return Response({"error": "Todos os campos devem ser preenchidos corretamente."}, status=status.HTTP_400_BAD_REQUEST)
+    if not all([token, senha_atual, senha_nova, confirm_senha_nova]):
+        return Response({"Todos os campos devem ser preenchidos corretamente."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if senha_nova != confirm_senha_nova:
+        return Response({"A nova senha e a confirmação da nova senha não coincidem."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
@@ -303,20 +308,19 @@ def reset_password(request):
         user = User.objects.get(id=user_id)
 
         if not check_password(senha_atual, user.password):
-            return Response({"error": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"A senha atual está incorreta"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Atualiza a senha
         user.password = make_password(senha_nova)
         user.save()
 
-        return Response({"message": "Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
+        return Response({"Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
     
     except jwt.ExpiredSignatureError:
-        return Response({"error": "Token expirado!"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"Token expirado!"}, status=status.HTTP_400_BAD_REQUEST)
     except jwt.InvalidTokenError:
-        return Response({"error": "Token inválido"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"Token inválido"}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
-        return Response({"error": "O usuário não existe"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"O usuário não existe"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -325,12 +329,12 @@ def get_routes(request):
         '/api/accounts/token/',
         '/api/accounts/token/logout/',
         '/api/accounts/token/refresh/',
-        '/api/accounts/update-user-name/',
-        '/api/accounts/update-profile-picture/',
-        '/api/accounts/delete-profile-picture/',
-        '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
-        '/api/accounts/request-password-reset/',  # Nova rota para solicitar redefinição de senha
         '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
+        '/api/accounts/update-user-name/',
+        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
+        '/api/accounts/token/get-user-session/',
+        '/api/accounts/delete-profile-picture/',
+        '/api/accounts/update-profile-picture/',
+        '/api/accounts/request-password-reset/',  # Nova rota para solicitar redefinição de senha
     ]
     return Response(routes)
