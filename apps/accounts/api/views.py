@@ -215,8 +215,8 @@ def get_user_session(request):
 @permission_classes([IsAuthenticated])
 def request_email_change(request):
     user_id = request.user.id  
-    email_atual = request.data.get('old_email')
-    email_novo = request.data.get('new_email')
+    email_atual = request.data.get('email_atual')
+    email_novo = request.data.get('email_novo')
 
     payload = {
         'user_id': str(user_id), 
