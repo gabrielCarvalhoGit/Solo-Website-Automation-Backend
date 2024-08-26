@@ -106,7 +106,6 @@ def refresh_access_token(request):
 @permission_classes([IsAuthenticated])
 def logout_user(request):
     try:
-
         refresh_token = request.COOKIES.get('refresh_token')
         if refresh_token:
             token = RefreshToken(refresh_token)
@@ -200,6 +199,7 @@ def delete_profile_picture(request):
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
     user = request.user
+
     try:
         profile_picture_url = user.profile_picture.url if user.profile_picture else None
         
@@ -210,7 +210,6 @@ def get_user_session(request):
         })
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-    
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -305,12 +304,10 @@ def reset_password(request):
         if not check_password(senha_atual, user.password):
             return Response({"error": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Atualiza a senha
         user.password = make_password(senha_nova)
         user.save()
 
         return Response({"message": "Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
-    
     except jwt.ExpiredSignatureError:
         return Response({"error": "Token expirado!"}, status=status.HTTP_400_BAD_REQUEST)
     except jwt.InvalidTokenError:
@@ -329,8 +326,9 @@ def get_routes(request):
         '/api/accounts/update-profile-picture/',
         '/api/accounts/delete-profile-picture/',
         '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
-        '/api/accounts/request-password-reset/',  # Nova rota para solicitar redefinição de senha
-        '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
+        '/api/accounts/update-user-name/',
+        '/api/accounts/request-password-reset/',
+        '/api/accounts/reset-password/',
     ]
+
     return Response(routes)
