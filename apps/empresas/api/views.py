@@ -9,16 +9,13 @@ from .serializers import EmpresaSerializer, EmpresaCreateSerializer
 @api_view(['GET'])
 def empresas_list(request):
     empresas = Empresa.objects.all()
+    total_empresas = Empresa.total_empresas()
+
     serializer = EmpresaSerializer(empresas, many=True)
-
-    return Response(serializer.data)
-
-@api_view(['GET'])
-def empresa_detail(request, id):
-    empresa = Empresa.objects.get(id=id)
-    serializer = EmpresaSerializer(empresa, many=False)
-
-    return Response(serializer.data)
+    return Response({
+        "total_empresas": total_empresas,
+        "empresas": serializer.data
+    })
 
 @api_view(['POST'])
 def create_empresa(request):
