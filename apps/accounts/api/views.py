@@ -1,27 +1,25 @@
+import jwt
 from datetime import datetime, timedelta, timezone
+
+from django.conf import settings
+from django.core.mail import send_mail
+from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password, make_password
+
 from rest_framework.response import Response
 from rest_framework import status, serializers
-from rest_framework.response import Response
-from datetime import datetime, timedelta
-from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from django.core.mail import send_mail
+
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.core.mail import send_mail
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from django.contrib.auth.models import User
-import jwt
-from datetime import datetime, timedelta
-from django.conf import settings
+
 from ..models import User
 from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
-from django.contrib.auth.hashers import check_password, make_password
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -30,6 +28,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['email'] = user.email
         token['nome'] = user.nome
+
         return token
 
     def validate(self, attrs):
@@ -38,7 +37,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = authenticate(email=email, password=password)
 
         if user is None:
-            raise serializers.ValidationError("Email ou senha inválido.")
+            raise serializers.ValidationError({"detail": "Email ou senha inválido."})
         
         return super().validate(attrs)
     
@@ -51,7 +50,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except serializers.ValidationError:
-            return Response({'Erro': 'Credenciais inválidas.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Credenciais inválidas.'}, status=status.HTTP_400_BAD_REQUEST)
         
         refresh = serializer.validated_data.get('refresh')
         access = serializer.validated_data.get('access')
@@ -90,7 +89,9 @@ def refresh_access_token(request):
     try:
         refresh = RefreshToken(refresh_token)
         access = refresh.access_token
+
         response = Response({'access_token': str(access)}, status=status.HTTP_200_OK)
+
         response.set_cookie(
             key='access_token',
             value=str(access),
@@ -105,9 +106,9 @@ def refresh_access_token(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
-    try:
+    refresh_token = request.COOKIES.get('refresh_token')
 
-        refresh_token = request.COOKIES.get('refresh_token')
+    try:
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
@@ -200,8 +201,9 @@ def delete_profile_picture(request):
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
     user = request.user
+
     try:
-        profile_picture_url = user.profile_picture.url if user.profile_picture else None
+        profile_picture_url = request.build_absolute_uri(user.profile_picture.url) if user.profile_picture.url else None
         
         return Response({
             'email': user.email,
@@ -210,7 +212,6 @@ def get_user_session(request):
         })
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-    
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -313,8 +314,7 @@ def reset_password(request):
         user.password = make_password(senha_nova)
         user.save()
 
-        return Response({"Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
-    
+        return Response({"message": "Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
     except jwt.ExpiredSignatureError:
         return Response({"Token expirado!"}, status=status.HTTP_400_BAD_REQUEST)
     except jwt.InvalidTokenError:
@@ -331,10 +331,12 @@ def get_routes(request):
         '/api/accounts/token/refresh/',
         '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
         '/api/accounts/update-user-name/',
-        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
-        '/api/accounts/token/get-user-session/',
-        '/api/accounts/delete-profile-picture/',
         '/api/accounts/update-profile-picture/',
+        '/api/accounts/delete-profile-picture/',
+        '/api/accounts/token/get-user-session',
+        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
         '/api/accounts/request-password-reset/',  # Nova rota para solicitar redefinição de senha
+        '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
     ]
+
     return Response(routes)

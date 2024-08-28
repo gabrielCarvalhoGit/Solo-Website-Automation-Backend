@@ -26,7 +26,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True)
 
-    nome = models.CharField(max_length=100, default='admin')
+    nome = models.CharField(max_length=100, blank=True)
     email = models.EmailField(unique=True)
     profile_picture = models.ImageField(upload_to='profile_pictures', null=True, blank=True)
 

@@ -36,6 +36,7 @@ class EmpresaCreateSerializer(serializers.ModelSerializer):
         password_temp = User.objects.make_random_password()
         user = User.objects.create_user(
             email=email,
+            nome='Admin',
             password=password_temp,
             is_admin_empresa=True
         )

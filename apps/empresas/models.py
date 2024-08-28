@@ -24,6 +24,10 @@ class Empresa(models.Model):
     def save(self, *args, **kwargs):
         self.cnpj = re.sub(r'\D', '', self.cnpj)
         super().save(*args, **kwargs)
+    
+    @classmethod
+    def total_empresas(self):
+        return Empresa.objects.count()
 
     def __str__(self):
         return self.nome
