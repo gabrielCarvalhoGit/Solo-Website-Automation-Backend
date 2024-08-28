@@ -8,7 +8,7 @@ from .serializers import EmpresaSerializer, EmpresaCreateSerializer
 
 
 class CustomPagePagination(PageNumberPagination):
-    page_size = 5
+    page_size = 7
     page_query_param = 'page'
     max_page_size = 50
 
@@ -39,13 +39,26 @@ def create_empresa(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['DELETE'])
+def delete_empresa_by_name(request):
+    nome = request.query_params.get('nome')
+    if nome:
+        try:
+            empresa = Empresa.objects.get(nome=nome)
+            empresa.delete()
+            return Response({'detail': 'Empresa deletada com sucesso.'}, status=status.HTTP_204_NO_CONTENT)
+        except Empresa.DoesNotExist:
+            return Response({'detail': 'Empresa não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    return Response({'detail': 'Nome não fornecido'}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET'])
 def api_overview(request):
     api_urls = {
-        'api/empresas/',
-        'api/empresas/list-empresas/',
-        'api/empresas/empresa-detail',
-        'api/empresas/create-empresa'
+        'api/empresas/': 'GET list of empresas',
+        'api/empresas/list-empresas/': 'GET list of empresas with pagination',
+        'api/empresas/create-empresa': 'POST create a new empresa',
+        'api/empresas/delete-by-name/': 'DELETE delete an empresa'
     }
 
     return Response(api_urls)

@@ -28,13 +28,13 @@ class UpdateProfilePictureSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-    
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
         if instance.profile_picture:
-            request = self.context.get('request')
-            representation['profile_picture_url'] = request.build_absolute_uri(instance.profile_picture.url)
+            # Retorna apenas o caminho relativo
+            representation['profile_picture_url'] = instance.profile_picture.url
         else:
             representation['profile_picture_url'] = None
 
