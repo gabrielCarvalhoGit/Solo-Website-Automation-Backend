@@ -1,3 +1,4 @@
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,13 +7,22 @@ from ..models import Empresa
 from .serializers import EmpresaSerializer, EmpresaCreateSerializer
 
 
+class CustomPagePagination(PageNumberPagination):
+    page_size = 5
+    page_query_param = 'page'
+    max_page_size = 50
+
 @api_view(['GET'])
 def empresas_list(request):
     empresas = Empresa.objects.all()
     total_empresas = Empresa.total_empresas()
 
-    serializer = EmpresaSerializer(empresas, many=True)
-    return Response({
+    pagination_class = CustomPagePagination()
+    paginated_queryset = pagination_class.paginate_queryset(empresas, request)
+
+    serializer = EmpresaSerializer(paginated_queryset, many=True)
+
+    return pagination_class.get_paginated_response({
         "total_empresas": total_empresas,
         "empresas": serializer.data
     })
