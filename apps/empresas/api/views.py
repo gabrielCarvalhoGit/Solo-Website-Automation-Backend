@@ -8,7 +8,7 @@ from .serializers import EmpresaSerializer, EmpresaCreateSerializer
 
 
 class CustomPagePagination(PageNumberPagination):
-    page_size = 8
+    page_size = 7
     page_query_param = 'page'
     max_page_size = 50
 
