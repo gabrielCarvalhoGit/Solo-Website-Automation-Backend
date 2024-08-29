@@ -203,7 +203,7 @@ def get_user_session(request):
     user = request.user
 
     try:
-        profile_picture_url = request.build_absolute_uri(user.profile_picture.url) if user.profile_picture.url else None
+        profile_picture_url = user.profile_picture.url if user.profile_picture else None
         
         return Response({
             'email': user.email,
@@ -224,7 +224,7 @@ def request_email_change(request):
         'user_id': str(user_id), 
         'email_atual': email_atual,
         'email_novo': email_novo,
-        'exp': datetime.utcnow() + timedelta(hours=1),
+        'exp': datetime.now(timezone.utc) + timedelta(hours=1),
     }
 
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
