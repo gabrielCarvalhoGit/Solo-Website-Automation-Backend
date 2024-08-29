@@ -19,6 +19,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
+from ..utils import generate_change_email_token, generate_reset_password_token
 from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
 
@@ -37,7 +38,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = authenticate(email=email, password=password)
 
         if user is None:
-            raise serializers.ValidationError({"detail": "Email ou senha inválido."})
+            raise serializers.ValidationError({'detail': 'Email ou senha inválido.'})
         
         return super().validate(attrs)
     
@@ -153,7 +154,7 @@ def update_user_name(request):
 
             return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -175,7 +176,7 @@ def update_profile_picture(request):
                 'profile_picture_url': response_data['profile_picture_url']
             }, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -193,7 +194,7 @@ def delete_profile_picture(request):
 
             return Response({'detail': 'Imagem de perfil removida com sucesso'}, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -216,18 +217,9 @@ def get_user_session(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def request_email_change(request):
-    user_id = request.user.id  
-    email_atual = request.data.get('email_atual')
     email_novo = request.data.get('email_novo')
 
-    payload = {
-        'user_id': str(user_id), 
-        'email_atual': email_atual,
-        'email_novo': email_novo,
-        'exp': datetime.now(timezone.utc) + timedelta(hours=1),
-    }
-
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+    token = generate_change_email_token(request)
 
     url_confirmacao = f'http://localhost:3000/confirm-email/?token={token}'
     send_mail(
@@ -238,7 +230,7 @@ def request_email_change(request):
         fail_silently=False,
     )
 
-    return Response({'message': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
+    return Response({'detail': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -247,48 +239,41 @@ def confirm_email_change(request):
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+
         user_id = payload.get('user_id')
         email_novo = payload.get('email_novo')
     except jwt.ExpiredSignatureError:
-        return Response({'O token expirou.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'O token expirou.'}, status=status.HTTP_400_BAD_REQUEST)
     except jwt.InvalidTokenError:
-        return Response({'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user = User.objects.get(id=user_id)
         user.email = email_novo
-        user.save()
 
-        return Response({'E-mail atualizado com sucesso.'}, status=status.HTTP_200_OK)
+        user.save()
+        return Response({'detail': 'E-mail atualizado com sucesso.'}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return Response({'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 def request_password_reset(request):
     email = request.data.get('email')
-    user = User.objects.filter(email=email).first()
+    token = generate_reset_password_token(email)
 
-    if not user:
-        return Response({"Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
-
-    payload = {
-        'user_id': str(user.id),
-        'email': user.email,
-        'exp': datetime.utcnow() + timedelta(hours=1),
-    }
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+    if token is None:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
     reset_link = f"http://localhost:3000/reset-password?token={token}"
     send_mail(
         'Redefinição de Senha',
         f'Clique no link para redefinir sua senha: {reset_link}',
         'noreply@solosolutions.com.br',
-        [user.email],
+        [email],
         fail_silently=False,
     )
 
-    return Response({"message": "Link enviado"}, status=status.HTTP_200_OK)
-
+    return Response({'detail': 'Link enviado'}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def reset_password(request):
@@ -329,14 +314,14 @@ def get_routes(request):
         '/api/accounts/token/',
         '/api/accounts/token/logout/',
         '/api/accounts/token/refresh/',
-        '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
+        '/api/accounts/reset-password/',
         '/api/accounts/update-user-name/',
         '/api/accounts/update-profile-picture/',
         '/api/accounts/delete-profile-picture/',
         '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name/',  # Corrigido: rota estava duplicada e sem barra no final
-        '/api/accounts/request-password-reset/',  # Nova rota para solicitar redefinição de senha
-        '/api/accounts/reset-password/',  # Nova rota para redefinir a senha
+        '/api/accounts/update-user-name/',
+        '/api/accounts/request-password-reset/',
+        '/api/accounts/reset-password/',
     ]
 
     return Response(routes)
