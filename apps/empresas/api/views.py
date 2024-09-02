@@ -1,10 +1,13 @@
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 
 from ..models import Empresa
 from .serializers import EmpresaSerializer, EmpresaCreateSerializer
+
+from .permissions import IsSoloAdmin
 
 
 class CustomPagePagination(PageNumberPagination):
@@ -13,8 +16,9 @@ class CustomPagePagination(PageNumberPagination):
     max_page_size = 50
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsSoloAdmin])
 def empresas_list(request):
-    empresas = Empresa.objects.all()
+    empresas = Empresa.objects.all().order_by('-created_at')
     total_empresas = Empresa.total_empresas()
 
     pagination_class = CustomPagePagination()
@@ -28,6 +32,7 @@ def empresas_list(request):
     })
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated, IsSoloAdmin])
 def create_empresa(request):
     serializer = EmpresaCreateSerializer(data=request.data)
 
@@ -38,7 +43,6 @@ def create_empresa(request):
         return Response({'empresa': empresa_serializer.data}, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['DELETE'])
 def delete_empresa_by_name(request):
@@ -53,12 +57,13 @@ def delete_empresa_by_name(request):
     return Response({'detail': 'Nome não fornecido'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-def api_overview(request):
-    api_urls = {
-        'api/empresas/': 'GET list of empresas',
-        'api/empresas/list-empresas/': 'GET list of empresas with pagination',
-        'api/empresas/create-empresa': 'POST create a new empresa',
-        'api/empresas/delete-by-name/': 'DELETE delete an empresa'
-    }
+@permission_classes([AllowAny])
+def get_routes(request):
+    api_urls = [
+        'api/empresas/',
+        'api/empresas/list-empresas/',
+        'api/empresas/create-empresa',
+        'api/empresas/delete-by-name/'
+    ]
 
     return Response(api_urls)

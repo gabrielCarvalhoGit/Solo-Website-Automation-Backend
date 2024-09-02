@@ -1,15 +1,12 @@
-import jwt
 from datetime import datetime, timedelta, timezone
 
 from django.core.mail import send_mail
-from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 
@@ -231,6 +228,7 @@ def reset_password(request):
         return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_user_name(request):
