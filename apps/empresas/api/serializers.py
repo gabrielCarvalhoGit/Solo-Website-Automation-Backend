@@ -25,6 +25,12 @@ class EmpresaCreateSerializer(serializers.ModelSerializer):
         
         return value
     
+    def validate_name(self, value):
+        if User.objects.filter(nome=value).exists():
+            raise serializers.ValidationError('O nome informado ja possui uma empresa cadastrada.')
+        
+        return value
+    
     def create(self, validated_data):
         email = validated_data.pop('email')
 
