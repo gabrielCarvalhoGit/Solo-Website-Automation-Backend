@@ -296,10 +296,12 @@ def get_user_session(request):
 
     try:
         profile_picture_url = user.profile_picture.url if user.profile_picture else None
+        empresa = user.empresa.nome if user.empresa else None
         
         return Response({
             'email': user.email,
             'nome': user.nome,
+            'empresa': empresa,
             'profile_picture': profile_picture_url
         })
     except User.DoesNotExist:
