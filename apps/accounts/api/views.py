@@ -1,17 +1,17 @@
 import jwt
 from datetime import datetime, timedelta, timezone
 
-from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import make_password
 
 from rest_framework.response import Response
 from rest_framework import status, serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
@@ -19,7 +19,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
-from ..utils import generate_change_email_token, generate_reset_password_token
+from ..utils import generate_change_email_token, generate_reset_password_token, validate_jwt_token
 from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
 
@@ -51,7 +51,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except serializers.ValidationError:
-            return Response({'detail': 'Credenciais inválidas.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Credenciais inválidas.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         refresh = serializer.validated_data.get('refresh')
         access = serializer.validated_data.get('access')
@@ -85,7 +85,7 @@ def refresh_access_token(request):
     refresh_token = request.COOKIES.get('refresh_token')
 
     if not refresh_token:
-        return Response({'detail': 'Refresh token não encontrado'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'detail': 'Refresh token não encontrado.'}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
         refresh = RefreshToken(refresh_token)
@@ -102,7 +102,7 @@ def refresh_access_token(request):
         )
         return response
     except TokenError:
-        return Response({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'detail': 'Token inválido.'}, status=status.HTTP_401_UNAUTHORIZED)
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -114,7 +114,7 @@ def logout_user(request):
             token = RefreshToken(refresh_token)
             token.blacklist()
 
-        response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+        response = Response({'detail': 'Logout successful.'}, status=status.HTTP_200_OK)
 
         response.set_cookie(
             key='access_token',
@@ -136,10 +136,101 @@ def logout_user(request):
 
         return response
     except TokenError:
-        return Response({'detail': 'Token inválido'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'detail': 'Token inválido.'}, status=status.HTTP_401_UNAUTHORIZED)
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def request_email_change(request):
+    email_novo = request.data.get('email_novo')
+
+    try:
+        token = generate_change_email_token(request)
+
+        url_confirmacao = f'http://localhost:3000/confirm-email/?token={token}'
+        send_mail(
+            'Confirme sua mudança de e-mail',
+            f'Clique no link para confirmar a mudança de e-mail: {url_confirmacao}',
+            'no-reply@myapp.com',
+            [email_novo],
+            fail_silently=False,
+        )
+
+        return Response({'detail': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])  
+def confirm_email_change(request):
+    try:
+        token = validate_jwt_token(request)
+
+        user_id = token.get('user_id')
+        email_novo = token.get('email_novo')
+
+        user = User.objects.get(id=user_id)
+        user.email = email_novo
+
+        user.save()
+        return Response({'detail': 'E-mail atualizado com sucesso.'}, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    email = request.data.get('email')
+
+    try:
+        token = generate_reset_password_token(email)
+
+        reset_link = f"http://localhost:3000/reset-password?token={token}"
+        send_mail(
+            'Redefinição de Senha',
+            f'Clique no link para redefinir sua senha: {reset_link}',
+            'noreply@solosolutions.com.br',
+            [email],
+            fail_silently=False,
+        )
+
+        return Response({'detail': 'Link enviado.'}, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def reset_password(request):
+    try:
+        token = validate_jwt_token(request)
+        user_id = token['user_id']
+
+        senha_nova = request.data.get('senha_nova')
+        confirm_senha_nova = request.data.get('confirm_senha_nova')
+
+        if not senha_nova or not confirm_senha_nova:
+            return Response({'detail': 'Todos os campos devem ser preenchidos corretamente.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if senha_nova != confirm_senha_nova:
+            return Response({'detail': 'A nova senha e a confirmação da nova senha não coincidem.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.get(id=user_id)
+        user.password = make_password(senha_nova)
+
+        user.save()
+        return Response({'detail': 'Senha atualizada com sucesso.'}, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_user_name(request):
@@ -152,11 +243,11 @@ def update_user_name(request):
         if serializer.is_valid():
             serializer.save()
 
-            return Response({'detail': 'Nome atualizado com sucesso'}, status=status.HTTP_200_OK)
+            return Response({'detail': 'Nome atualizado com sucesso.'}, status=status.HTTP_200_OK)
         
         return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -178,7 +269,7 @@ def update_profile_picture(request):
         
         return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -192,11 +283,11 @@ def delete_profile_picture(request):
         if serializer.is_valid():
             serializer.save()
 
-            return Response({'detail': 'Imagem de perfil removida com sucesso'}, status=status.HTTP_200_OK)
+            return Response({'detail': 'Imagem de perfil removida com sucesso.'}, status=status.HTTP_200_OK)
         
         return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -212,100 +303,7 @@ def get_user_session(request):
             'profile_picture': profile_picture_url
         })
     except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def request_email_change(request):
-    email_novo = request.data.get('email_novo')
-
-    token = generate_change_email_token(request)
-
-    url_confirmacao = f'http://localhost:3000/confirm-email/?token={token}'
-    send_mail(
-        'Confirme sua mudança de e-mail',
-        f'Clique no link para confirmar a mudança de e-mail: {url_confirmacao}',
-        'no-reply@myapp.com',
-        [email_novo],
-        fail_silently=False,
-    )
-
-    return Response({'detail': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
-
-@api_view(['POST'])
-@permission_classes([AllowAny])  
-def confirm_email_change(request):
-    token = request.data.get('token')
-
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-
-        user_id = payload.get('user_id')
-        email_novo = payload.get('email_novo')
-    except jwt.ExpiredSignatureError:
-        return Response({'detail': 'O token expirou.'}, status=status.HTTP_400_BAD_REQUEST)
-    except jwt.InvalidTokenError:
-        return Response({'detail': 'Token inválido.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        user = User.objects.get(id=user_id)
-        user.email = email_novo
-
-        user.save()
-        return Response({'detail': 'E-mail atualizado com sucesso.'}, status=status.HTTP_200_OK)
-    except User.DoesNotExist:
         return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['POST'])
-def request_password_reset(request):
-    email = request.data.get('email')
-    token = generate_reset_password_token(email)
-
-    if token is None:
-        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-
-    reset_link = f"http://localhost:3000/reset-password?token={token}"
-    send_mail(
-        'Redefinição de Senha',
-        f'Clique no link para redefinir sua senha: {reset_link}',
-        'noreply@solosolutions.com.br',
-        [email],
-        fail_silently=False,
-    )
-
-    return Response({'detail': 'Link enviado'}, status=status.HTTP_200_OK)
-
-@api_view(['POST'])
-def reset_password(request):
-    token = request.data.get('token')
-    senha_atual = request.data.get('senha_atual')
-    senha_nova = request.data.get('senha_nova')
-    confirm_senha_nova = request.data.get('confirm_senha_nova')
-
-    if not all([token, senha_atual, senha_nova, confirm_senha_nova]):
-        return Response({"Todos os campos devem ser preenchidos corretamente."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if senha_nova != confirm_senha_nova:
-        return Response({"A nova senha e a confirmação da nova senha não coincidem."}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        user_id = payload['user_id']
-        user = User.objects.get(id=user_id)
-
-        if not check_password(senha_atual, user.password):
-            return Response({"A senha atual está incorreta"}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.password = make_password(senha_nova)
-        user.save()
-
-        return Response({"message": "Senha atualizada com sucesso!"}, status=status.HTTP_200_OK)
-    except jwt.ExpiredSignatureError:
-        return Response({"Token expirado!"}, status=status.HTTP_400_BAD_REQUEST)
-    except jwt.InvalidTokenError:
-        return Response({"Token inválido"}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({"O usuário não existe"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

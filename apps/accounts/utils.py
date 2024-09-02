@@ -1,19 +1,21 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
-
-from .models import User
-
 import jwt
 from django.conf import settings
 from datetime import datetime, timedelta, timezone
+from rest_framework.exceptions import ValidationError
+
+from .models import User
+
 
 def generate_change_email_token(request):
     user_id = request.user.id
     email_atual = request.data.get('email_atual')
     email_novo = request.data.get('email_novo')
+
+    if email_atual != request.user.email:
+        raise ValidationError('O e-mail atual informado não corresponde ao e-mail cadastrado.')
+
+    if User.objects.filter(email=email_novo).exclude(id=user_id).exists():
+        raise ValidationError('Este e-mail já está em uso.')
 
     payload = {
         'user_id': str(user_id), 
@@ -29,7 +31,7 @@ def generate_reset_password_token(email):
     user = User.objects.filter(email=email).first()
 
     if not user:
-        return None
+        raise ValidationError('Usuário não encontrado.')
     
     payload = {
         'user_id': str(user.id),
@@ -40,20 +42,18 @@ def generate_reset_password_token(email):
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
     return token
 
-def generate_refresh_token(user):
-    token = RefreshToken.for_user(user)
-    return str(token)
+def validate_jwt_token(request):
+    token = request.data.get('token')
 
-def validate_jwt_token(token):
+    if not token:
+        raise ValidationError('Token não encontrado.')
+
     try:
-        refresh_token = RefreshToken(token)
-        
-        if BlacklistedToken.objects.filter(token__jti=refresh_token['jti']).exists():
-            return None
-        
-        return refresh_token
-    except TokenError:
-        return None
-    
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+    except jwt.ExpiredSignatureError:
+        raise ValidationError('O token expirou.')
+    except jwt.InvalidTokenError:
+        raise ValidationError('Token inválido.')
+
 def generate_temp_password():
     return User.objects.make_random_password(length=10)
