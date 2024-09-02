@@ -13,7 +13,7 @@ def validar_cnpj(cnpj):
 
 class Empresa(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    nome = models.CharField(max_length=100)
+    nome = models.CharField(max_length=100, unique=True)
     cnpj = models.CharField(max_length=18, unique=True, validators=[validar_cnpj])
     endereco = models.CharField(max_length=255)
     automacoes = models.ManyToManyField(Automacao)
