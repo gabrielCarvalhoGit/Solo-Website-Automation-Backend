@@ -1,13 +1,16 @@
+from django.core.mail import send_mail
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes
 
 from ..models import Empresa
-from .serializers import EmpresaSerializer, EmpresaCreateSerializer
+from apps.accounts.utils import generate_reset_password_token
 
 from .permissions import IsSoloAdmin
+from .serializers import EmpresaSerializer, EmpresaCreateSerializer
 
 
 class CustomPagePagination(PageNumberPagination):
@@ -38,8 +41,20 @@ def create_empresa(request):
 
     if serializer.is_valid():
         empresa = serializer.save()
-        empresa_serializer = EmpresaSerializer(empresa, many=False)
 
+        email = request.data.get('email')
+        token = generate_reset_password_token(email)
+
+        reset_link = f"http://localhost:3000/reset-password?token={token}"
+        send_mail(
+            'Redefinição de Senha',
+            f'Clique no link para redefinir sua senha: {reset_link}',
+            'noreply@solosolutions.com.br',
+            [email],
+            fail_silently=False,
+        )
+
+        empresa_serializer = EmpresaSerializer(empresa, many=False)
         return Response({'empresa': empresa_serializer.data}, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
