@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 from ..models import Empresa
 from ..utils import set_automacoes
 
@@ -26,7 +28,7 @@ class EmpresaCreateSerializer(serializers.ModelSerializer):
         return value
     
     def validate_name(self, value):
-        if User.objects.filter(nome=value).exists():
+        if Empresa.objects.filter(nome=value).exists():
             raise serializers.ValidationError('O nome informado ja possui uma empresa cadastrada.')
         
         return value
@@ -50,3 +52,18 @@ class EmpresaCreateSerializer(serializers.ModelSerializer):
         user.save()
 
         return empresa
+    
+class EmpresaUpdateSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=100, required=False)
+    cnpj = serializers.CharField(max_length=18, required=False)
+    endereco = serializers.CharField(max_length=255, required=False)
+    automacoes = serializers.PrimaryKeyRelatedField(queryset=Automacao.objects.all(), many=True, required=False)
+
+    def to_internal_value(self, data):
+        allowed_keys = set(self.fields.keys())
+
+        for key in data:
+            if key not in allowed_keys:
+                raise ValidationError({key: 'Campo inválido.'})
+            
+        return super().to_internal_value(data)

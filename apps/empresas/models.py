@@ -1,13 +1,14 @@
 import re
 import uuid
 from django.db import models
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
 
 from apps.automacoes.models import Automacao
 
 
 def validar_cnpj(cnpj):
     cnpj = re.sub(r'\D', '', cnpj)
+    
     if len(cnpj) != 14:
         raise ValidationError('CNPJ deve ter 14 dígitos.')
 
@@ -23,11 +24,13 @@ class Empresa(models.Model):
 
     def save(self, *args, **kwargs):
         self.cnpj = re.sub(r'\D', '', self.cnpj)
+
+        validar_cnpj(self.cnpj)
         super().save(*args, **kwargs)
     
     @classmethod
-    def total_empresas(self):
-        return Empresa.objects.count()
+    def total_empresas(cls):
+        return cls.objects.count()
 
     def __str__(self):
         return self.nome

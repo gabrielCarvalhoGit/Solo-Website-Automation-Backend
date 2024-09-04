@@ -3,14 +3,16 @@ from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 
 from ..models import Empresa
 from apps.accounts.utils import generate_reset_password_token
+from apps.empresas.services.empresa_service import EmpresaService
 
-from .permissions import IsSoloAdmin
-from .serializers import EmpresaSerializer, EmpresaCreateSerializer
+from core.permissions import IsSoloAdmin
+from .serializers import EmpresaSerializer, EmpresaCreateSerializer, EmpresaUpdateSerializer
 
 
 class CustomPagePagination(PageNumberPagination):
@@ -58,6 +60,27 @@ def create_empresa(request):
         return Response({'empresa': empresa_serializer.data}, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsSoloAdmin])
+def update_empresa(request, id):
+    service = EmpresaService()
+
+    try:
+        empresa = service.get_empresa(id)
+        serializer = EmpresaUpdateSerializer(instance=empresa, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            updated_empresa = service.update_empresa(empresa, **serializer.validated_data)
+            empresa_serializer = EmpresaSerializer(updated_empresa, many=False)
+
+            return Response({'detail': empresa_serializer.data}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except NotFound:
+        return Response({'detail': 'Empresa não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
 def delete_empresa_by_name(request):
