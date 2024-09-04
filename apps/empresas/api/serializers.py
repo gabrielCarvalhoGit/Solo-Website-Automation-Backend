@@ -44,7 +44,7 @@ class EmpresaCreateSerializer(serializers.ModelSerializer):
         password_temp = User.objects.make_random_password()
         user = User.objects.create_user(
             email=email,
-            nome='Admin',
+            nome="Admin",
             password=password_temp,
             is_admin_empresa=True
         )
@@ -60,10 +60,10 @@ class EmpresaUpdateSerializer(serializers.Serializer):
     automacoes = serializers.PrimaryKeyRelatedField(queryset=Automacao.objects.all(), many=True, required=False)
 
     def to_internal_value(self, data):
-        allowed_keys = set(self.fields.keys())
+        allowed_fields = set(self.fields.keys())
 
-        for key in data:
-            if key not in allowed_keys:
-                raise ValidationError({key: 'Campo inválido.'})
+        for field in data:
+            if field not in allowed_fields:
+                raise serializers.ValidationError({field: 'Parâmetro inválido.'})
             
         return super().to_internal_value(data)

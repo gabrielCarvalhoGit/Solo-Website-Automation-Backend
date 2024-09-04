@@ -1,6 +1,25 @@
 from rest_framework import serializers
 from ..models import User
 
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'nome', 'empresa', 'date_joined']
+
+class CreateUserSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=100, required=False, default="Membro")
+    email = serializers.EmailField(required=True)
+
+    def to_internal_value(self, data):
+        allowed_fields = set(self.fields.keys())
+
+        for field in data:
+            if field not in allowed_fields:
+                raise serializers.ValidationError({field: 'Parâmetro inválido.'})
+            
+        return super().to_internal_value(data)
+
 class UpdateUserNameSerializer(serializers.ModelSerializer):
     nome = serializers.CharField(required=True)
 

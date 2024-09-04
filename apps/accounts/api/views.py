@@ -17,7 +17,10 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
 from ..utils import generate_change_email_token, generate_reset_password_token, validate_jwt_token
-from .serializers import UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
+from .serializers import UserSerializer, CreateUserSerializer, UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
+
+from core.permissions import IsAdminEmpresa
+from apps.accounts.services.user_service import UserService
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -228,6 +231,24 @@ def reset_password(request):
         return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminEmpresa])
+def create_user(request):
+    serializer = CreateUserSerializer(data=request.data)
+
+    if serializer.is_valid():
+        service = UserService()
+        
+        try:
+            user = service.create_user(request, **serializer.validated_data)
+            user_serializer = UserSerializer(user, many=False)
+
+            return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
+        
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])

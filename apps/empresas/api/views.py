@@ -74,7 +74,7 @@ def update_empresa(request, id):
             updated_empresa = service.update_empresa(empresa, **serializer.validated_data)
             empresa_serializer = EmpresaSerializer(updated_empresa, many=False)
 
-            return Response({'detail': empresa_serializer.data}, status=status.HTTP_200_OK)
+            return Response({'empresa': empresa_serializer.data}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except NotFound:
