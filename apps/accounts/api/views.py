@@ -309,6 +309,16 @@ def delete_profile_picture(request):
         return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminEmpresa])
+def get_users_empresa(request):
+    service = UserService()
+
+    users_empresa = service.get_users_by_empresa(request)
+    serializer = UserSerializer(users_empresa, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
     user = request.user
