@@ -337,12 +337,14 @@ def get_user_session(request):
     try:
         profile_picture_url = user.profile_picture.url if user.profile_picture else None
         empresa = user.empresa.nome if user.empresa else None
+        is_solo_admin = user.groups.filter(name='solo_admin').exists()
         
         return Response({
             'email': user.email,
             'nome': user.nome,
             'empresa': empresa,
             'is_admin_empresa': user.is_admin_empresa,
+            'is_solo_admin': is_solo_admin,
             'profile_picture': profile_picture_url
         })
     except User.DoesNotExist:
