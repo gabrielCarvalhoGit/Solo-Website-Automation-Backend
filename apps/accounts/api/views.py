@@ -7,6 +7,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 
@@ -78,6 +79,11 @@ class MyTokenObtainPairView(TokenObtainPairView):
         )
 
         return response
+
+class CustomPagePagination(PageNumberPagination):
+    page_size = 7
+    page_query_param = 'page'
+    max_page_size = 50
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -312,11 +318,16 @@ def delete_profile_picture(request):
 @permission_classes([IsAuthenticated, IsAdminEmpresa])
 def get_users_empresa(request):
     service = UserService()
-
     users_empresa = service.get_users_by_empresa(request)
-    serializer = UserSerializer(users_empresa, many=True)
 
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    pagination_class = CustomPagePagination()
+    paginated_queryset = pagination_class.paginate_queryset(users_empresa, request)
+
+    serializer = UserSerializer(paginated_queryset, many=True)
+    response = pagination_class.get_paginated_response({'users': serializer.data})
+
+    response.status_code = status.HTTP_200_OK
+    return response
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
