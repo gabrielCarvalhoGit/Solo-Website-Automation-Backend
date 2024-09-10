@@ -22,6 +22,7 @@ from .serializers import UserSerializer, CreateUserSerializer, UpdateUserNameSer
 
 from core.permissions import IsAdminEmpresa
 from apps.accounts.services.user_service import UserService
+from apps.accounts.services.authentication_service import AuthenticationService
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -89,16 +90,12 @@ class CustomPagePagination(PageNumberPagination):
 @permission_classes([IsAuthenticated])
 def refresh_access_token(request):
     refresh_token = request.COOKIES.get('refresh_token')
-
-    if not refresh_token:
-        return Response({'detail': 'Refresh token não encontrado.'}, status=status.HTTP_401_UNAUTHORIZED)
+    service = AuthenticationService()
 
     try:
-        refresh = RefreshToken(refresh_token)
-        access = refresh.access_token
+        access = service.refresh_access_token(refresh_token)
 
         response = Response({'access_token': str(access)}, status=status.HTTP_200_OK)
-
         response.set_cookie(
             key='access_token',
             value=str(access),
@@ -106,45 +103,22 @@ def refresh_access_token(request):
             secure=True,
             samesite='None'
         )
+
         return response
-    except TokenError:
-        return Response({'detail': 'Token inválido.'}, status=status.HTTP_401_UNAUTHORIZED)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_401_UNAUTHORIZED)
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
     refresh_token = request.COOKIES.get('refresh_token')
+    service = AuthenticationService()
 
     try:
-        if refresh_token:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
-        response = Response({'detail': 'Logout successful.'}, status=status.HTTP_200_OK)
-
-        response.set_cookie(
-            key='access_token',
-            value='',
-            expires=datetime.now(timezone.utc) - timedelta(days=1),
-            httponly=True,
-            secure=True,
-            samesite='None'
-        )
-
-        response.set_cookie(
-            key='refresh_token',
-            value='',
-            expires=datetime.now(timezone.utc) - timedelta(days=1),
-            httponly=True,
-            secure=True,
-            samesite='None'
-        )
-
-        return response
-    except TokenError:
-        return Response({'detail': 'Token inválido.'}, status=status.HTTP_401_UNAUTHORIZED)
-    except Exception as e:
-        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        service.logout(refresh_token)
+        return Response({'detail': 'Logout successful.'}, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
