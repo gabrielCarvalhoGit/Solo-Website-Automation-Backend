@@ -317,17 +317,20 @@ def delete_profile_picture(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminEmpresa])
 def get_users_empresa(request):
-    service = UserService()
-    users_empresa = service.get_users_by_empresa(request)
+    try:
+        service = UserService()
+        users_empresa = service.get_users_by_empresa(request)
 
-    pagination_class = CustomPagePagination()
-    paginated_queryset = pagination_class.paginate_queryset(users_empresa, request)
+        pagination_class = CustomPagePagination()
+        paginated_queryset = pagination_class.paginate_queryset(users_empresa, request)
 
-    serializer = UserSerializer(paginated_queryset, many=True)
-    response = pagination_class.get_paginated_response({'users': serializer.data})
+        serializer = UserSerializer(paginated_queryset, many=True)
+        response = pagination_class.get_paginated_response({'users': serializer.data})
 
-    response.status_code = status.HTTP_200_OK
-    return response
+        response.status_code = status.HTTP_200_OK
+        return response
+    except ValidationError as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

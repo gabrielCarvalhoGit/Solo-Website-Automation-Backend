@@ -2,9 +2,10 @@ import jwt
 from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 
 from core.services.email_service import EmailService
+from apps.empresas.services.empresa_service import EmpresaService
 from apps.accounts.repositories.user_repository import UserRepository
 
 
@@ -38,10 +39,18 @@ class UserService:
         return user
     
     def get_users_by_empresa(self, request):
-        empresa_id = request.user.empresa.id
+        empresa_id = request.user.empresa.id if request.user.empresa else None
 
-        users_empresa = self.repository.get_users_by_empresa(empresa_id)
-        return users_empresa
+        if empresa_id is None:
+            raise ValidationError('O usuário não está associado a nenhuma empresa cadastrada.')
+        
+        try:
+            empresa = EmpresaService().get_empresa(empresa_id)
+            users_empresa = self.repository.get_users_by_empresa(empresa.id)
+            
+            return users_empresa
+        except NotFound:
+            raise ValidationError('Empresa não encontrada.')
 
     @staticmethod
     def validate_fields(**kwargs):
