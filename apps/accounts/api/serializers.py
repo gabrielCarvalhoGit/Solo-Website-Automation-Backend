@@ -22,6 +22,9 @@ class CreateUserSerializer(serializers.Serializer):
             
         return super().to_internal_value(data)
 
+class UpdateUserSerializer(serializers.Serializer):
+    nome = serializers.CharField(max_length=100, required=False)
+
 class UpdateUserNameSerializer(serializers.ModelSerializer):
     nome = serializers.CharField(required=True)
 

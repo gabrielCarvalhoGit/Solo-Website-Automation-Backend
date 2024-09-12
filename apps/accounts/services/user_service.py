@@ -5,6 +5,8 @@ from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
 
 from core.services.email_service import EmailService
+
+from apps.accounts.models import User
 from apps.empresas.services.empresa_service import EmpresaService
 from apps.accounts.repositories.user_repository import UserRepository
 
@@ -37,8 +39,20 @@ class UserService:
             raise ValidationError(str(e))
         
         return user
-    
-    def get_users_by_empresa(self, request):
+
+    def update_user(self, user, **kwargs):
+        return self.repository.update(user, **kwargs)
+
+    def get_user(self, request):
+        user_id = request.user.id
+
+        try:
+            user = self.repository.get_user_by_id(user_id)
+            return user
+        except User.DoesNotExist:
+            raise NotFound('Usuário não encontrado.')
+
+    def get_users_empresa(self, request):
         empresa_id = request.user.empresa.id if request.user.empresa else None
 
         if empresa_id is None:
@@ -50,11 +64,11 @@ class UserService:
             
             return users_empresa
         except NotFound:
-            raise ValidationError('Empresa não encontrada.')
+            raise NotFound('Empresa não encontrada.')
 
     @staticmethod
     def validate_fields(**kwargs):
         email = kwargs.get('email')
 
         if UserRepository().validate_email(email):
-            raise ValidationError('O e-mail informado já possui um usuário cadastrado.')
+            raise ValueError('O e-mail informado já possui um usuário cadastrado.')

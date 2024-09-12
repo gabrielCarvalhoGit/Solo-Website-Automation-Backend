@@ -6,8 +6,8 @@ from django.contrib.auth.hashers import make_password
 
 from rest_framework.response import Response
 from rest_framework import status, serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 
@@ -18,7 +18,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
 from ..utils import generate_change_email_token, generate_reset_password_token, validate_jwt_token
-from .serializers import UserSerializer, CreateUserSerializer, UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
+from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
 from core.permissions import IsAdminEmpresa
 from apps.accounts.services.user_service import UserService
@@ -119,6 +119,25 @@ def logout_user(request):
         return Response({'detail': 'Logout successful.'}, status=status.HTTP_200_OK)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_user(request):
+    service = UserService()
+
+    try:
+        user = service.get_user(request)
+        serializer = UpdateUserSerializer(instance=user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            updated_user = service.update_user(user, **serializer.validated_data)
+            user_serializer = UserSerializer(updated_user, many=False)
+
+            return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+        
+        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except NotFound as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -228,7 +247,7 @@ def create_user(request):
         except ValidationError as e:
             return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
         
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -293,7 +312,7 @@ def delete_profile_picture(request):
 def get_users_empresa(request):
     try:
         service = UserService()
-        users_empresa = service.get_users_by_empresa(request)
+        users_empresa = service.get_users_empresa(request)
 
         pagination_class = CustomPagePagination()
         paginated_queryset = pagination_class.paginate_queryset(users_empresa, request)
@@ -303,6 +322,8 @@ def get_users_empresa(request):
 
         response.status_code = status.HTTP_200_OK
         return response
+    except NotFound as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
