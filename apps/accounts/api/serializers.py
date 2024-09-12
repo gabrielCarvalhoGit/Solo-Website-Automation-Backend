@@ -3,6 +3,8 @@ from ..models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
+    empresa = serializers.CharField(source='empresa.nome', read_only=True)
+
     class Meta:
         model = User
         fields = ['id', 'email', 'nome', 'empresa', 'date_joined', 'profile_picture']
