@@ -15,6 +15,7 @@ DEBUG = os.getenv("DEBUG")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(',')
 
 SITE_URL = os.getenv('SITE_URL')
+FRONTEND_URL = os.getenv('FRONTEND_URL')
 
 INSTALLED_APPS = [
     'django.contrib.admin',

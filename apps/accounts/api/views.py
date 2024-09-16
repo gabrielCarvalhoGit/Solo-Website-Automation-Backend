@@ -13,8 +13,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
-from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer
-from ..utils import generate_change_email_token, generate_reset_password_token, validate_jwt_token
+from ..utils import generate_reset_password_token, validate_jwt_token
+from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, ChangeEmailSerializer
 
 from core.permissions import IsAdminEmpresa
 from apps.accounts.services.user_service import UserService
@@ -156,21 +156,19 @@ def update_user(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def request_email_change(request):
-    email_novo = request.data.get('email_novo')
+    service = UserService()
 
     try:
-        token = generate_change_email_token(request)
+        user = service.get_user(request)
+        serializer = ChangeEmailSerializer(data=request.data)
 
-        url_confirmacao = f'http://localhost:3000/confirm-email/?token={token}'
-        send_mail(
-            'Confirme sua mudança de e-mail',
-            f'Clique no link para confirmar a mudança de e-mail: {url_confirmacao}',
-            'no-reply@myapp.com',
-            [email_novo],
-            fail_silently=False,
-        )
-
-        return Response({'detail': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
+        if serializer.is_valid():
+            service.process_email_change(user, **serializer.validated_data)
+            return Response({'detail': 'E-mail de confirmação enviado com sucesso.'}, status=status.HTTP_200_OK)
+        
+        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    except NotFound as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -288,7 +286,7 @@ def get_user_session(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_routes(request):
+def api_overview(request):
     routes = [
         '/api/accounts/'
         '/api/accounts/token/',

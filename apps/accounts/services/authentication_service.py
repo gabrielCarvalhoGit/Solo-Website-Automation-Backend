@@ -16,7 +16,7 @@ class AuthenticationService:
             return access
         except TokenError:
             raise ValidationError('Token inválido.')
-        
+
     def logout(self, refresh_token):
         if not refresh_token:
             raise ValidationError('Refresh token não encontrado.')
