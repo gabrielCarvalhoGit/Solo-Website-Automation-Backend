@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta, timezone
-
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -11,14 +9,12 @@ from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from ..models import User
+from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer
 from ..utils import generate_change_email_token, generate_reset_password_token, validate_jwt_token
-from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, UpdateUserNameSerializer, UpdateProfilePictureSerializer, DeleteProfilePictureSerializer
 
 from core.permissions import IsAdminEmpresa
 from apps.accounts.services.user_service import UserService
@@ -119,6 +115,24 @@ def logout_user(request):
         return Response({'detail': 'Logout successful.'}, status=status.HTTP_200_OK)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminEmpresa])
+def create_user(request):
+    serializer = CreateUserSerializer(data=request.data)
+
+    if serializer.is_valid():
+        service = UserService()
+        
+        try:
+            user = service.create_user(request, **serializer.validated_data)
+            user_serializer = UserSerializer(user, many=False)
+
+            return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
+        
+    return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -231,82 +245,6 @@ def reset_password(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminEmpresa])
-def create_user(request):
-    serializer = CreateUserSerializer(data=request.data)
-
-    if serializer.is_valid():
-        service = UserService()
-        
-        try:
-            user = service.create_user(request, **serializer.validated_data)
-            user_serializer = UserSerializer(user, many=False)
-
-            return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
-        except ValidationError as e:
-            return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
-        
-    return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated])
-def update_user_name(request):
-    user_id = request.user.id
-
-    try:
-        user = User.objects.get(id=user_id)
-        serializer = UpdateUserNameSerializer(user, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-
-            return Response({'detail': 'Nome atualizado com sucesso.'}, status=status.HTTP_200_OK)
-        
-        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated])
-def update_profile_picture(request):
-    user_id = request.user.id
-
-    try:
-        user = User.objects.get(id=user_id)
-        serializer = UpdateProfilePictureSerializer(user, data=request.data, partial=True, context={'request': request})
-
-        if serializer.is_valid():
-            serializer.save()
-
-            response_data = serializer.to_representation(user)
-            return Response({
-                'detail': 'Imagem de perfil atualizada com sucesso.',
-                'profile_picture_url': response_data['profile_picture_url']
-            }, status=status.HTTP_200_OK)
-        
-        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated])
-def delete_profile_picture(request):
-    user_id = request.user.id
-
-    try:
-        user = User.objects.get(id=user_id)
-        serializer = DeleteProfilePictureSerializer(user, data={'profile_picture': None}, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-
-            return Response({'detail': 'Imagem de perfil removida com sucesso.'}, status=status.HTTP_200_OK)
-        
-        return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminEmpresa])
 def get_users_empresa(request):
@@ -352,17 +290,18 @@ def get_user_session(request):
 @permission_classes([AllowAny])
 def get_routes(request):
     routes = [
+        '/api/accounts/'
         '/api/accounts/token/',
-        '/api/accounts/token/logout/',
         '/api/accounts/token/refresh/',
-        '/api/accounts/reset-password/',
-        '/api/accounts/update-user-name/',
-        '/api/accounts/update-profile-picture/',
-        '/api/accounts/delete-profile-picture/',
-        '/api/accounts/token/get-user-session',
-        '/api/accounts/update-user-name/',
+        '/api/token/logout/',
+        '/api/accounts/token/get-user-session/',
+        '/api/accounts/create-user/',
+        '/api/accounts/update-user/',
+        '/api/accounts/request-email-change/',
+        '/api/accounts/confirm-email-change/',
         '/api/accounts/request-password-reset/',
-        '/api/accounts/reset-password/',
+        '/api/accounts/reset-password',
+        '/api/accounts/get-users-empresa',
     ]
 
     return Response(routes)

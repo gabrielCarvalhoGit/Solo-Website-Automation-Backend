@@ -16,15 +16,15 @@ class UserService:
         self.repository = UserRepository()
         self.email_service = EmailService()
 
-    def create_user(self, request, **kwargs):
+    def create_user(self, request, **validated_data):
         empresa = request.user.empresa
         password_temp = self.repository.generate_password_temp()
 
-        kwargs['empresa'] = empresa
-        kwargs['password'] = password_temp
+        validated_data['empresa'] = empresa
+        validated_data['password'] = password_temp
 
-        self.validate_fields(**kwargs)
-        user = self.repository.create(**kwargs)
+        self.validate_fields(**validated_data)
+        user = self.repository.create(**validated_data)
 
         try:
             payload_token = {
@@ -40,8 +40,8 @@ class UserService:
         
         return user
 
-    def update_user(self, user, **kwargs):
-        return self.repository.update(user, **kwargs)
+    def update_user(self, user, **validated_data):
+        return self.repository.update(user, **validated_data)
 
     def get_user(self, request):
         user_id = request.user.id
@@ -67,8 +67,8 @@ class UserService:
             raise NotFound('Empresa não encontrada.')
 
     @staticmethod
-    def validate_fields(**kwargs):
-        email = kwargs.get('email')
+    def validate_fields(**validated_data):
+        email = validated_data.get('email')
 
         if UserRepository().validate_email(email):
             raise ValueError('O e-mail informado já possui um usuário cadastrado.')
