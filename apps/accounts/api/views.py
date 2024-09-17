@@ -176,21 +176,19 @@ def request_email_change(request):
 @authentication_classes([])
 @permission_classes([AllowAny])  
 def confirm_email_change(request):
+    service = UserService()
+
     try:
-        token = validate_jwt_token(request)
+        token = service.validate_token(request)
 
-        user_id = token.get('user_id')
-        email_novo = token.get('email_novo')
+        updated_user = service.confirm_email_change(token)
+        user_serializer = UserSerializer(updated_user, many=False)
 
-        user = User.objects.get(id=user_id)
-        user.email = email_novo
-
-        user.save()
-        return Response({'detail': 'E-mail atualizado com sucesso.'}, status=status.HTTP_200_OK)
+        return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+    except NotFound as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 @authentication_classes([])

@@ -22,7 +22,7 @@ class UserRepository:
         
         user.save()
         return user
-    
+
     def validate_email(self, email):
         return User.objects.filter(email=email).exists()
     

@@ -16,8 +16,9 @@ class UserService:
         self.repository = UserRepository()
         self.email_service = EmailService()
 
-    def get_user(self, request):
-        user_id = request.user.id
+    def get_user(self, request=None, user_id=None):
+        if user_id is None and request is not None:
+            user_id = request.user.id
 
         try:
             user = self.repository.get_user_by_id(user_id)
@@ -91,3 +92,23 @@ class UserService:
             self.email_service.send_request_email_change(token, email_novo)
         except Exception as e:
             raise ValidationError(str(e))
+    
+    def confirm_email_change(self, token):
+        user_id = token.get('user_id')
+        email_novo = token.get('email_novo')
+
+        user = self.get_user(user_id=user_id)
+        return self.repository.update(user, email=email_novo)
+
+    def validate_token(self, request):
+        token = request.data.get('token')
+
+        if not token:
+            raise ValidationError('Token não encontrado.')
+        
+        try:
+            return jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            raise ValidationError('O token expirou.')
+        except jwt.InvalidTokenError:
+            raise ValidationError('Token inválido.')
