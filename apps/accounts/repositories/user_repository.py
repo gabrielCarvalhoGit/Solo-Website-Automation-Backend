@@ -5,6 +5,9 @@ class UserRepository:
     def get_user_by_id(self, user_id):
         return User.objects.get(id=user_id)
 
+    def get_user_by_email(self, email):
+        return User.objects.get(email=email)
+
     def get_users_by_empresa(self, empresa_id):
         return User.objects.filter(empresa_id=empresa_id).order_by('-date_joined')
     

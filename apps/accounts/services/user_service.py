@@ -51,19 +51,9 @@ class UserService:
             raise ValidationError('Este e-mail já está em uso.')
         
         user = self.repository.create(**validated_data)
+        token = self.generate_password_reset_token(user)
 
-        try:
-            payload_token = {
-                'user_id': str(user.id),
-                'email': user.email,
-                'exp': datetime.now(timezone.utc) + timedelta(hours=1)
-            }
-            token = jwt.encode(payload_token, settings.SECRET_KEY, algorithm='HS256')
-
-            self.email_service.send_reset_password_email(token, user.email)
-        except Exception as e:
-            raise ValidationError(str(e))
-        
+        self.email_service.send_reset_password_email(token, user.email)
         return user
 
     def update_user(self, user, **validated_data):
@@ -88,7 +78,6 @@ class UserService:
             }
 
             token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-
             self.email_service.send_request_email_change(token, email_novo)
         except Exception as e:
             raise ValidationError(str(e))
@@ -99,6 +88,31 @@ class UserService:
 
         user = self.get_user(user_id=user_id)
         return self.repository.update(user, email=email_novo)
+
+    def process_password_reset(self, request):
+        email = request.data.get('email')
+
+        if not email:
+            raise ValidationError({'email': ["Este campo é obrigatório"]})
+        
+        try:
+            user = self.repository.get_user_by_email(email)
+            token = self.generate_password_reset_token(user)
+
+            self.email_service.send_reset_password_email(token, email)
+        except User.DoesNotExist:
+            raise NotFound('Usuário não encontrado.')
+        
+    def generate_password_reset_token(self, user):
+        try:
+            payload = {
+                'user_id': str(user.id),
+                'email': user.email,
+                'exp': datetime.now(timezone.utc) + timedelta(hours=1),
+            }
+            return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+        except Exception as e:
+            raise ValidationError(str(e))
 
     def validate_token(self, request):
         token = request.data.get('token')

@@ -194,23 +194,15 @@ def confirm_email_change(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def request_password_reset(request):
-    email = request.data.get('email')
+    service = UserService()
 
     try:
-        token = generate_reset_password_token(email)
-
-        reset_link = f"http://localhost:3000/reset-password?token={token}"
-        send_mail(
-            'Redefinição de Senha',
-            f'Clique no link para redefinir sua senha: {reset_link}',
-            'noreply@solosolutions.com.br',
-            [email],
-            fail_silently=False,
-        )
-
-        return Response({'detail': 'Link enviado.'}, status=status.HTTP_200_OK)
+        service.process_password_reset(request)
+        return Response({'detail': 'Email de redefinição de senha enviado com sucesso.'}, status=status.HTTP_200_OK)
+    except NotFound as e:
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @authentication_classes([])
@@ -283,6 +275,7 @@ def get_user_session(request):
         return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def api_overview(request):
     routes = [
