@@ -2,8 +2,9 @@ import jwt
 from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
-from rest_framework.exceptions import ValidationError, NotFound
+from django.contrib.auth.hashers import make_password
 
+from rest_framework.exceptions import ValidationError, NotFound
 from core.services.email_service import EmailService
 
 from apps.accounts.models import User
@@ -14,7 +15,9 @@ from apps.accounts.repositories.user_repository import UserRepository
 class UserService:
     def __init__(self):
         self.repository = UserRepository()
+
         self.email_service = EmailService()
+        self.empresa_service = EmpresaService()
 
     def get_user(self, request=None, user_id=None):
         if user_id is None and request is not None:
@@ -33,12 +36,26 @@ class UserService:
             raise ValidationError('O usuário não está associado a nenhuma empresa cadastrada.')
         
         try:
-            empresa = EmpresaService().get_empresa(empresa_id)
+            empresa = self.empresa_service.get_empresa(empresa_id)
             users_empresa = self.repository.get_users_by_empresa(empresa.id)
             
             return users_empresa
         except NotFound:
             raise NotFound('Empresa não encontrada.')
+
+    def get_session(self, user):
+        profile_picture_url = user.profile_picture.url if user.profile_picture else None
+        empresa = user.empresa.nome if user.empresa else None
+        is_solo_admin = user.groups.filter(name='solo_admin').exists()
+
+        return {
+            'email': user.email,
+            'nome': user.nome,
+            'empresa': empresa,
+            'is_admin_empresa': user.is_admin_empresa,
+            'is_solo_admin': is_solo_admin,
+            'profile_picture': profile_picture_url
+        }
 
     def create_user(self, request, **validated_data):
         empresa = request.user.empresa
@@ -93,7 +110,7 @@ class UserService:
         email = request.data.get('email')
 
         if not email:
-            raise ValidationError({'email': ["Este campo é obrigatório"]})
+            raise ValidationError({'email': ["Este campo é obrigatório."]})
         
         try:
             user = self.repository.get_user_by_email(email)
@@ -102,7 +119,19 @@ class UserService:
             self.email_service.send_reset_password_email(token, email)
         except User.DoesNotExist:
             raise NotFound('Usuário não encontrado.')
+    
+    def reset_password(self, request, token):
+        user_id = token.get('user_id')
+        senha_nova = request.data.get('senha_nova')
+
+        if not senha_nova:
+            raise ValidationError({'senha_nova': ["Este campo é obrigatório."]})
         
+        user = self.get_user(user_id=user_id)
+        user.password = make_password(senha_nova)
+
+        user.save()
+
     def generate_password_reset_token(self, user):
         try:
             payload = {

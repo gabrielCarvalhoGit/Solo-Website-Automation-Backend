@@ -5,7 +5,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 
 class AuthenticationService:
-    def refresh_access_token(self, refresh_token):
+    def refresh_access_token(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+
         if not refresh_token:
             raise ValidationError('Refresh token não encontrado.')
         
@@ -17,7 +19,9 @@ class AuthenticationService:
         except TokenError:
             raise ValidationError('Token inválido.')
 
-    def logout(self, refresh_token):
+    def logout(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+        
         if not refresh_token:
             raise ValidationError('Refresh token não encontrado.')
         

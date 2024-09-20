@@ -1,6 +1,4 @@
-from django.core.mail import send_mail
 from django.contrib.auth import authenticate
-from django.contrib.auth.hashers import make_password
 
 from rest_framework.response import Response
 from rest_framework import status, serializers
@@ -12,8 +10,6 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from ..models import User
-from ..utils import generate_reset_password_token, validate_jwt_token
 from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, ChangeEmailSerializer
 
 from core.permissions import IsAdminEmpresa
@@ -85,11 +81,10 @@ class CustomPagePagination(PageNumberPagination):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def refresh_access_token(request):
-    refresh_token = request.COOKIES.get('refresh_token')
     service = AuthenticationService()
 
     try:
-        access = service.refresh_access_token(refresh_token)
+        access = service.refresh_access_token(request)
 
         response = Response({'access_token': str(access)}, status=status.HTTP_200_OK)
         response.set_cookie(
@@ -107,11 +102,10 @@ def refresh_access_token(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
-    refresh_token = request.COOKIES.get('refresh_token')
     service = AuthenticationService()
 
     try:
-        service.logout(refresh_token)
+        service.logout(request)
         return Response({'detail': 'Logout successful.'}, status=status.HTTP_200_OK)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_401_UNAUTHORIZED)
@@ -202,36 +196,28 @@ def request_password_reset(request):
     except NotFound as e:
         return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
-        return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        if isinstance(e.detail, dict):
+            error_detail = {'detail': e.detail}
+        else:
+            error_detail = {'detail': str(e.detail[0])}
+
+        return Response(error_detail, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def reset_password(request):
+    service = UserService()
+
     try:
-        token = validate_jwt_token(request)
-        user_id = token['user_id']
+        token = service.validate_token(request)
+        service.reset_password(request, token)
 
-        senha_nova = request.data.get('senha_nova')
-        confirm_senha_nova = request.data.get('confirm_senha_nova')
-
-        if not senha_nova or not confirm_senha_nova:
-            return Response({'detail': 'Todos os campos devem ser preenchidos corretamente.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if senha_nova != confirm_senha_nova:
-            return Response({'detail': 'A nova senha e a confirmação da nova senha não coincidem.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        user = User.objects.get(id=user_id)
-        user.password = make_password(senha_nova)
-
-        user.save()
         return Response({'detail': 'Senha atualizada com sucesso.'}, status=status.HTTP_200_OK)
+    except NotFound as e:
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminEmpresa])
@@ -256,23 +242,15 @@ def get_users_empresa(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_session(request):
-    user = request.user
+    service = UserService()
 
     try:
-        profile_picture_url = user.profile_picture.url if user.profile_picture else None
-        empresa = user.empresa.nome if user.empresa else None
-        is_solo_admin = user.groups.filter(name='solo_admin').exists()
-        
-        return Response({
-            'email': user.email,
-            'nome': user.nome,
-            'empresa': empresa,
-            'is_admin_empresa': user.is_admin_empresa,
-            'is_solo_admin': is_solo_admin,
-            'profile_picture': profile_picture_url
-        })
-    except User.DoesNotExist:
-        return Response({'detail': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        user = service.get_user(request)
+        user_session = service.get_session(user)
+
+        return Response({'user': user_session}, status=status.HTTP_200_OK)
+    except NotFound as e:
+        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @authentication_classes([])
