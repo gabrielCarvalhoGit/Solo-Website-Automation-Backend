@@ -12,8 +12,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, ChangeEmailSerializer
 
-from core.permissions import IsAdminEmpresa
 from apps.accounts.services.user_service import UserService
+from core.permissions import IsAdminEmpresa, CanCreateUser
 from apps.accounts.services.authentication_service import AuthenticationService
 
 
@@ -111,7 +111,7 @@ def logout_user(request):
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminEmpresa])
+@permission_classes([IsAuthenticated, CanCreateUser])
 def create_user(request):
     serializer = CreateUserSerializer(data=request.data)
 
@@ -258,16 +258,21 @@ def get_user_session(request):
 def api_overview(request):
     routes = [
         '/api/accounts/'
+
         '/api/accounts/token/',
         '/api/accounts/token/refresh/',
-        '/api/token/logout/',
-        '/api/accounts/token/get-user-session/',
+        '/api/accounts/token/logout/',
+
         '/api/accounts/create-user/',
         '/api/accounts/update-user/',
+
         '/api/accounts/request-email-change/',
         '/api/accounts/confirm-email-change/',
+
         '/api/accounts/request-password-reset/',
         '/api/accounts/reset-password',
+
+        '/api/accounts/get-user-session/',
         '/api/accounts/get-users-empresa',
     ]
 

@@ -8,3 +8,7 @@ class IsSoloAdmin(BasePermission):
 class IsAdminEmpresa(BasePermission):
     def has_permission(self, request, view):
         return request.user.groups.filter(name='resp_empresa').exists()
+    
+class CanCreateUser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.has_perm('accounts.add_user')

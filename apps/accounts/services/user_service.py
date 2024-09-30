@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password
 
 from rest_framework.exceptions import ValidationError, NotFound
+
 from core.services.email_service import EmailService
 
 from apps.accounts.models import User
@@ -59,6 +60,7 @@ class UserService:
 
     def create_user(self, request, **validated_data):
         empresa = request.user.empresa
+        group = self.repository.get_group('solo_admin') if not empresa else None
         password_temp = self.repository.generate_password_temp()
 
         validated_data['empresa'] = empresa
@@ -67,7 +69,7 @@ class UserService:
         if self.repository.validate_email(validated_data['email']):
             raise ValidationError('Este e-mail já está em uso.')
         
-        user = self.repository.create(**validated_data)
+        user = self.repository.create(group, **validated_data)
         token = self.generate_password_reset_token(user)
 
         self.email_service.send_reset_password_email(token, user.email)
