@@ -11,7 +11,7 @@ from ..models import Empresa
 from apps.accounts.utils import generate_reset_password_token
 from apps.empresas.services.empresa_service import EmpresaService
 
-from core.permissions import IsSoloAdmin
+from apps.core.permissions import IsSoloAdmin
 from .serializers import EmpresaSerializer, EmpresaCreateSerializer, EmpresaUpdateSerializer
 
 

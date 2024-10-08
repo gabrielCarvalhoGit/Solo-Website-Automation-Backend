@@ -13,8 +13,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, ChangeEmailSerializer
 
 from apps.accounts.services.user_service import UserService
-from core.permissions import IsAdminEmpresa, CanCreateUser
-from apps.accounts.services.authentication_service import AuthenticationService
+from apps.core.permissions import IsAdminEmpresa, CanCreateUser
+from apps.accounts.services.auth_service import AuthenticationService
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -173,9 +173,7 @@ def confirm_email_change(request):
     service = UserService()
 
     try:
-        token = service.validate_token(request)
-
-        updated_user = service.confirm_email_change(token)
+        updated_user = service.confirm_email_change(request)
         user_serializer = UserSerializer(updated_user, many=False)
 
         return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
@@ -210,7 +208,7 @@ def reset_password(request):
     service = UserService()
 
     try:
-        token = service.validate_token(request)
+        token = service.validate_access_token(request)
         service.reset_password(request, token)
 
         return Response({'detail': 'Senha atualizada com sucesso.'}, status=status.HTTP_200_OK)
