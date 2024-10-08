@@ -74,9 +74,11 @@ class UserService:
             raise ValidationError('Este e-mail já está em uso.')
         
         user = self.repository.create(group, **validated_data)
-        token = self.generate_password_reset_token(user)
 
-        self.email_service.send_reset_password_email(token, user.email)
+        access_token = AccessToken.for_user(user)
+        access_token.set_exp(lifetime=timedelta(hours=1))
+
+        self.email_service.send_reset_password_email(access_token, user.email)
         return user
 
     def update_user(self, user, **validated_data):
@@ -108,7 +110,7 @@ class UserService:
         email_novo = token.get('email_novo')
 
         if not email_novo:
-            raise ValidationError('Dados ausentes no token.')
+            raise ValidationError('Toke inválido.')
 
         user = self.get_user(user_id=user_id)
         return self.repository.update(user, email=email_novo)
@@ -121,15 +123,25 @@ class UserService:
         
         try:
             user = self.repository.get_user_by_email(email)
-            token = self.generate_password_reset_token(user)
 
-            self.email_service.send_reset_password_email(token, email)
+            access_token = AccessToken.for_user(user)
+            access_token.set_exp(lifetime=timedelta(hours=1))
+
+            self.email_service.send_reset_password_email(access_token, email)
         except User.DoesNotExist:
             raise NotFound('Usuário não encontrado.')
+        except Exception as e:
+            raise ValidationError(str(e))
     
-    def reset_password(self, request, token):
+    def reset_password(self, request):
+        token = self.auth_service.validate_access_token(request)
+
         user_id = token.get('user_id')
+        email = token.get('email')
         senha_nova = request.data.get('senha_nova')
+
+        if email:
+            raise ValidationError('Token inválido.')
 
         if not senha_nova:
             raise ValidationError({'senha_nova': ["Este campo é obrigatório."]})
@@ -138,14 +150,3 @@ class UserService:
         user.password = make_password(senha_nova)
 
         user.save()
-
-    def generate_password_reset_token(self, user):
-        try:
-            payload = {
-                'user_id': str(user.id),
-                'email': user.email,
-                'exp': datetime.now(timezone.utc) + timedelta(hours=1),
-            }
-            return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        except Exception as e:
-            raise ValidationError(str(e))

@@ -32,7 +32,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = authenticate(email=email, password=password)
 
         if user is None:
-            raise serializers.ValidationError({'detail': 'Email ou senha inválido.'})
+            raise serializers.ValidationError()
         
         return super().validate(attrs)
     
@@ -51,8 +51,8 @@ class MyTokenObtainPairView(TokenObtainPairView):
         access = serializer.validated_data.get('access')
 
         response = Response({
-            'access': access,
-            'refresh': refresh
+            'refresh': refresh,
+            'access': access
         })
 
         response.set_cookie(
@@ -194,12 +194,8 @@ def request_password_reset(request):
     except NotFound as e:
         return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
-        if isinstance(e.detail, dict):
-            error_detail = {'detail': e.detail}
-        else:
-            error_detail = {'detail': str(e.detail[0])}
-
-        return Response(error_detail, status=status.HTTP_400_BAD_REQUEST)
+        error_detail = e.detail if isinstance(e.detail, dict) else str(e.detail[0])
+        return Response({'detail': error_detail}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @authentication_classes([])
@@ -208,14 +204,13 @@ def reset_password(request):
     service = UserService()
 
     try:
-        token = service.validate_access_token(request)
-        service.reset_password(request, token)
-
+        service.reset_password(request)
         return Response({'detail': 'Senha atualizada com sucesso.'}, status=status.HTTP_200_OK)
     except NotFound as e:
         return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
-        return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        error_detail = e.detail if isinstance(e.detail, dict) else str(e.detail[0])
+        return Response({'detail': error_detail}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminEmpresa])
