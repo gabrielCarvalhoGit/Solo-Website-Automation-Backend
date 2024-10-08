@@ -21,6 +21,7 @@ urlpatterns = [
     path('request-password-reset/', views.request_password_reset, name='request-password-reset'),
     path('reset-password/', views.reset_password, name='reset-password'),
 
+    path('get-user/<uuid:id>/', views.get_user, name='get_user'),
     path('get-user-session/', views.get_user_session, name='get_user_session'),
     path('get-users-empresa/', views.get_users_empresa, name='get-users-empresa')
 ]

@@ -12,3 +12,7 @@ class IsAdminEmpresa(BasePermission):
 class CanCreateUser(BasePermission):
     def has_permission(self, request, view):
         return request.user.has_perm('accounts.add_user')
+    
+class CanDeleteUser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.has_perm('accounts.delete_user')

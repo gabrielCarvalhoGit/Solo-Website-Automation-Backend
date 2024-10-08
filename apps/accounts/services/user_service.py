@@ -84,6 +84,10 @@ class UserService:
     def update_user(self, user, **validated_data):
         return self.repository.update(user, **validated_data)
 
+    def delete_user(self, user_id):
+        user = self.get_user(user_id=user_id)
+        self.repository.delete(user)
+
     def process_email_change(self, user, **validated_data):
         email_atual = validated_data['email_atual']
         email_novo = validated_data['email_novo']

@@ -13,8 +13,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .serializers import UserSerializer, CreateUserSerializer, UpdateUserSerializer, ChangeEmailSerializer
 
 from apps.accounts.services.user_service import UserService
-from apps.core.permissions import IsAdminEmpresa, CanCreateUser
 from apps.accounts.services.auth_service import AuthenticationService
+from apps.core.permissions import IsAdminEmpresa, CanCreateUser, CanDeleteUser
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -145,7 +145,18 @@ def update_user(request):
         
         return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except NotFound as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+@permission_classes({IsAuthenticated, CanDeleteUser})
+def delete_user(request, id):
+    service = UserService
+
+    try:
+        service.delete_user(id)
+        return Response({'detail': 'Usuário excluido com sucesso.'}, status=status.HTTP_200_OK)
+    except NotFound as e:
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -162,7 +173,7 @@ def request_email_change(request):
         
         return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     except NotFound as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -178,7 +189,7 @@ def confirm_email_change(request):
 
         return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
     except NotFound as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -228,7 +239,7 @@ def get_users_empresa(request):
         response.status_code = status.HTTP_200_OK
         return response
     except NotFound as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
     except ValidationError as e:
         return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -243,7 +254,20 @@ def get_user_session(request):
 
         return Response({'user': user_session}, status=status.HTTP_200_OK)
     except NotFound as e:
-        return Response({'detail': str(e.detail[0])}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user(request, id):
+    service = UserService()
+
+    try:
+        user = service.get_user(user_id=id)
+        user_serializer = UserSerializer(user, many=False)
+
+        return Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+    except NotFound as e:
+        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @authentication_classes([])
