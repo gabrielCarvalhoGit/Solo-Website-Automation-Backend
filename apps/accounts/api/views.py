@@ -45,7 +45,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except serializers.ValidationError:
-            return Response({'detail': 'Credenciais inválidas.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': 'E-mail ou senha inválida.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         refresh = serializer.validated_data.get('refresh')
         access = serializer.validated_data.get('access')
