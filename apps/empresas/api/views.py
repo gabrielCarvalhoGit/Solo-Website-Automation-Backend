@@ -39,7 +39,7 @@ def get_list_empresas(request):
         response.status_code = status.HTTP_200_OK
         return response
     except NotFound as e:
-        return Response({'detail': str(e.detail)}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e.detail)}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsSoloAdmin])
